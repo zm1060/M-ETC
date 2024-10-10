@@ -1,60 +1,70 @@
 import torch
 import torch.nn as nn
 from data_preprocessing import load_data_from_directory, preprocess_data, get_dataloaders
-from model import BiLSTMModel
+from model import BiGRUModel  # 这里替换为 BiGRUModel
+import logging
 
-# 加载和预处理数据
-directory_path = './CIRA-CIC-DoHBrw-2020'
-combined_data = load_data_from_directory(directory_path)
-
-# 预处理数据
-train_dataset, val_dataset, scaler, label_encoder = preprocess_data(combined_data)
-
-# 创建数据加载器
-train_loader, val_loader = get_dataloaders(train_dataset, val_dataset, batch_size=64)
-
-# 定义模型参数
-numerical_dims = train_dataset[0][0].shape[0]  # 仅保留数值特征的维度
-
-# 初始化模型
-model = BiLSTMModel(
-    numerical_dims=numerical_dims,  # 数值特征维度
-    hidden_dim=64,
-    lstm_layers=2,
-    output_dim=len(label_encoder.classes_)  # 使用 label_encoder 来获取标签类别数
+# 配置logging
+logging.basicConfig(
+    filename='training.log',  # 日志文件名
+    filemode='a',  # 'a' 代表追加模式，'w' 代表覆盖
+    format='%(asctime)s - %(levelname)s - %(message)s',  # 日志格式
+    level=logging.INFO  # 设置日志记录级别为INFO
 )
 
-# 将模型移动到GPU（如果可用）
+
+# Load and preprocess the data
+directory_path = '../csv_output/CIRA-CIC-DoHBrw-2020'
+combined_data = load_data_from_directory(directory_path)
+
+# Preprocess the data (SMOTE is applied only on the training set)
+train_dataset, val_dataset, scaler, label_encoder = preprocess_data(combined_data)
+
+# Create data loaders
+train_loader, val_loader = get_dataloaders(train_dataset, val_dataset, batch_size=64)
+
+# Define model parameters
+numerical_dims = train_dataset[0][0].shape[0]  # Get the dimensionality of the features
+
+# Initialize the model (using BiGRU instead of BiLSTM)
+model = BiGRUModel(
+    numerical_dims=numerical_dims,
+    hidden_dim=64,
+    gru_layers=2,  # GRU layers
+    output_dim=len(label_encoder.classes_)
+)
+
+# Move model to GPU if available
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model.to(device)
 
-# 定义损失函数和优化器
+# Define loss function and optimizer
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)  # 调整学习率为1e-4
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
-# 训练循环
-num_epochs = 20
+# Training loop
+num_epochs = 100
 for epoch in range(num_epochs):
     model.train()
     total_loss = 0
     for batch in train_loader:
         X_batch, y_batch = [b.to(device) for b in batch]
         optimizer.zero_grad()
-        outputs = model(X_batch)  # 模型前向传播
+        outputs = model(X_batch)  # Forward pass
         
-        # 打印部分输出以调试
+        # Print sample output for debugging
         if epoch == 0 and total_loss == 0:
             print(f"Sample output: {outputs[:5].cpu().data.numpy()}")
         
-        loss = criterion(outputs, y_batch)  # 计算损失
-        loss.backward()  # 反向传播
-        optimizer.step()  # 更新参数
+        loss = criterion(outputs, y_batch)  # Calculate loss
+        loss.backward()  # Backward pass
+        optimizer.step()  # Update parameters
         total_loss += loss.item()
 
     avg_loss = total_loss / len(train_loader)
-    print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {avg_loss:.4f}")
+    logging.info(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {avg_loss:.4f}")
 
-    # 验证模型
+    # Evaluate the model on validation set
     model.eval()
     val_loss = 0
     correct = 0
@@ -70,8 +80,8 @@ for epoch in range(num_epochs):
             correct += (predicted == y_batch).sum().item()
 
     val_accuracy = correct / total
-    print(f"Epoch {epoch+1}/{num_epochs}, Val Loss: {val_loss/len(val_loader):.4f}, Val Accuracy: {val_accuracy:.4f}")
+    logging.info(f"Epoch {epoch+1}/{num_epochs}, Val Loss: {val_loss/len(val_loader):.4f}, Val Accuracy: {val_accuracy:.4f}")
 
-    # 每5个epoch保存一次模型
+    # Save the model every 5 epochs
     if epoch % 5 == 0:
         torch.save(model.state_dict(), f'model_epoch_{epoch+1}.pth')
