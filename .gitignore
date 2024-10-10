@@ -1,0 +1,5 @@
+*.pth
+*.pkl
+*.pyc
+*/__pycache__
+csv_output/
