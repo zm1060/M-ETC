@@ -8,15 +8,6 @@ from sklearn.preprocessing import LabelEncoder, StandardScaler
 from torch.utils.data import TensorDataset, DataLoader
 
 def load_data_from_directory(directory_path):
-    """
-    Load and preprocess data from all CSV files in a directory (including subdirectories).
-
-    Parameters:
-        directory_path (str): Path to the directory containing CSV files.
-
-    Returns:
-        pd.DataFrame: Combined DataFrame containing data from all CSV files.
-    """
     combined_data = pd.DataFrame()
 
     for root, _, files in os.walk(directory_path):
@@ -33,24 +24,12 @@ def load_data_from_directory(directory_path):
     return combined_data
 
 def preprocess_data(data, label_column='Label'):
-    """
-    Preprocess the combined DataFrame and prepare it for the model.
-
-    Parameters:
-        data (pd.DataFrame): Combined DataFrame.
-        label_column (str): Name of the label column.
-
-    Returns:
-        tuple: (X, y, scaler, label_encoder)
-    """
-    # 移除无关特征
     features_to_remove = ['SourceIP', 'DestinationIP', 'SourcePort', 'DestinationPort', 'TimeStamp']
     data = data.drop(columns=[feat for feat in features_to_remove if feat in data.columns], errors='ignore')
 
     print(f"Data shape after removing features: {data.shape}")
 
-    # 处理 NaN 值
-    nan_threshold = 0.9  # 如果超过 90% 的值为 NaN，则删除该列
+    nan_threshold = 0.9
     data = data.dropna(axis=1, thresh=int((1 - nan_threshold) * len(data)))
     data = data.fillna(0)
 
@@ -59,14 +38,13 @@ def preprocess_data(data, label_column='Label'):
     if data.empty:
         raise ValueError("Data is empty after preprocessing. Please check your dataset.")
 
-    # 编码标签列
     label_encoder = LabelEncoder()
     if label_column not in data.columns:
         raise ValueError(f"Label column '{label_column}' not found in the dataset.")
     
     data['Label'] = label_encoder.fit_transform(data[label_column])
 
-    # 分离特征和标签
+
     X = data.drop(columns=[label_column]).values
     y = data['Label'].values
 
@@ -75,7 +53,6 @@ def preprocess_data(data, label_column='Label'):
 
     print(f"Feature matrix shape: {X.shape}")
 
-    # 特征标准化
     scaler = StandardScaler()
     X = scaler.fit_transform(X)
 
@@ -102,3 +79,9 @@ def get_dataloaders(X, y, test_size=0.2, batch_size=64, sample_size=None):
     val_loader = DataLoader(val_dataset, batch_size=batch_size)
     
     return train_loader, val_loader
+
+def get_test_loader(X, y, batch_size=64):
+    test_dataset = TensorDataset(torch.tensor(X, dtype=torch.float32), torch.tensor(y, dtype=torch.long))
+    test_loader = DataLoader(test_dataset, batch_size=batch_size)
+    
+    return test_loader
