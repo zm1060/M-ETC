@@ -107,6 +107,31 @@ python main.py --model_type RandomForest --test --test_data_dir ./csv_output/CIR
 ```
 ---
 
+### Explain
+Explain
+
+#### Example Commands
+```shell
+ python main.py --explain --model_type CNN_BiLSTM_Attention --explain_checkpoint_p
+ath CNN_BiLSTM_best_model_checkpoint.pth --explain_data_dir ./csv_output/doh_dataset --data_dir ./csv_output
+/doh_dataset
+```
+```shell
+ python main.py --explain --model_type CNN_BiLSTM_Attention --explain_checkpoint_p
+ath CNN_BiLSTM_best_model_checkpoint.pth --explain_data_dir ./csv_output/doh_dataset --data_dir ./csv_output
+/doh_dataset
+```
+```shell
+ python main.py --explain --model_type CNN_BiLSTM_Attention --explain_checkpoint_p
+ath CNN_BiLSTM_best_model_checkpoint.pth --explain_data_dir ./csv_output/doh_dataset --data_dir ./csv_output
+/doh_dataset
+```
+```shell
+ python main.py --explain --model_type CNN_BiLSTM_Attention --explain_checkpoint_p
+ath CNN_BiLSTM_best_model_checkpoint.pth --explain_data_dir ./csv_output/doh_dataset --data_dir ./csv_output
+/doh_dataset
+```
+---
 ## Workflow
 
 ### Pre-Training

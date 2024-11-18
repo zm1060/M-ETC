@@ -12,6 +12,7 @@ import logging
 from sklearn.metrics import accuracy_score, log_loss, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix, cohen_kappa_score
 from xgboost import XGBClassifier
 
+
 def apply_pruning(model, amount=0.3):
     """
     Apply L1 unstructured pruning to Linear and LSTM layers in the model.
@@ -113,14 +114,24 @@ def evaluate_model(model, val_loader, device, criterion):
 
     return metrics
 
-def train_model(model, model_type, train_loader, val_loader, device, num_epochs=10, lr=1e-4, resume=False, checkpoint_path='model_checkpoint.pth', save_best=True, best_val_loss=float('inf')):
+def train_model(model, model_type, train_loader, val_loader, device, num_epochs=100, lr=1e-4, optimizer_type='adam', momentum=0.9, weight_decay=0.01, checkpoint_path='model_checkpoint.pth', resume=False, save_best=True, best_val_loss=float('inf')):
     """
     Train the model and validate on the validation set.
     """
     try:
-        optimizer = Adam(model.parameters(), lr=lr)
+        # Select optimizer based on user input
+        if optimizer_type == 'adam':
+            optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+        elif optimizer_type == 'sgd':
+            optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
+        elif optimizer_type == 'rmsprop':
+            optimizer = torch.optim.RMSprop(model.parameters(), lr=lr, weight_decay=weight_decay)
+        else:
+            raise ValueError(f"Unsupported optimizer type: {optimizer_type}")
+
+        # Criterion and scheduler
         criterion = torch.nn.CrossEntropyLoss()
-        scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=2)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=2)
         start_epoch = 0
         final_metrics = {}  # To store final metrics after training
 
