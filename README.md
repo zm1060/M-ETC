@@ -58,6 +58,11 @@ Train a model using the specified architecture and dataset.
 
 #### Example Commands
 ```shell
+python main.py --model_type XGBoost --train --epochs 10 --batch_size 64 --data_dir ./csv_output/Tunnel
+```
+python main.py --model_type XGBoost --train --epochs 10 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020
+
+```shell
 python main.py --model_type BiLSTM --train --epochs 10 --batch_size 64 --data_dir ./csv_output/doh_dataset
 ```
 ```shell
@@ -94,16 +99,16 @@ Evaluate the performance of a trained or fine-tuned model on a test dataset(neve
 
 #### Example Commands
 ```shell
-python main.py --model_type CNN_BiLSTM_Attention --test --test_data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 --best_checkpoint_path CNN_BiLSTM_Attention_fine_tuned_model.pth
+python main.py --model_type CNN_BiLSTM_Attention --test --test_data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 --test_checkpoint_path CNN_BiLSTM_Attention_fine_tuned_model.pth
 ```
 ```shell
-python main.py --model_type BiLSTM --test --test_data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 --best_checkpoint_path BiLSTM_fine_tuned_model.pth
+python main.py --model_type BiLSTM --test --test_data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 --test_checkpoint_path BiLSTM_fine_tuned_model.pth
 ```
 ```shell
-python main.py --model_type XGBoost --test --test_data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 --best_checkpoint_path XGBoost_fine_tuned_model.pkl
+python main.py --model_type XGBoost --test --test_data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 --test_checkpoint_path XGBoost_fine_tuned_model.pkl
 ```
 ```shell
-python main.py --model_type RandomForest --test --test_data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 --best_checkpoint_path RandomForest_fine_tuned_model.pkl
+python main.py --model_type RandomForest --test --test_data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 --test_checkpoint_path RandomForest_fine_tuned_model.pkl
 ```
 ---
 
@@ -112,25 +117,35 @@ Explain
 
 #### Example Commands
 ```shell
- python main.py --explain --model_type CNN_BiLSTM_Attention --explain_checkpoint_p
-ath CNN_BiLSTM_best_model_checkpoint.pth --explain_data_dir ./csv_output/doh_dataset --data_dir ./csv_output
-/doh_dataset
+python main.py --explain --model_type CNN_BiLSTM_Attention --explain_checkpoint_path CNN_BiLSTM_Attention_best_model_checkpoint.pth --explain_data_dir ./csv_output/doh_dataset --data_dir ./csv_output/doh_dataset
 ```
 ```shell
- python main.py --explain --model_type CNN_BiLSTM_Attention --explain_checkpoint_p
-ath CNN_BiLSTM_best_model_checkpoint.pth --explain_data_dir ./csv_output/doh_dataset --data_dir ./csv_output
-/doh_dataset
+python main.py --explain --model_type CNN_BiGRU_Attention --explain_checkpoint_path CNN_BiLSTM_best_model_checkpoint.pth --explain_data_dir ./csv_output/doh_dataset --data_dir ./csv_output/doh_dataset
 ```
 ```shell
- python main.py --explain --model_type CNN_BiLSTM_Attention --explain_checkpoint_p
-ath CNN_BiLSTM_best_model_checkpoint.pth --explain_data_dir ./csv_output/doh_dataset --data_dir ./csv_output
-/doh_dataset
+python main.py --explain --model_type CNN_BiLSTM --explain_checkpoint_path CNN_BiLSTM_best_model_checkpoint.pth --explain_data_dir ./csv_output/doh_dataset --data_dir ./csv_output/doh_dataset
 ```
 ```shell
- python main.py --explain --model_type CNN_BiLSTM_Attention --explain_checkpoint_p
-ath CNN_BiLSTM_best_model_checkpoint.pth --explain_data_dir ./csv_output/doh_dataset --data_dir ./csv_output
-/doh_dataset
+python main.py --explain --model_type CNN_BiGRU --explain_checkpoint_path CNN_BiGRU_best_model_checkpoint.pth --explain_data_dir ./csv_output/doh_dataset --data_dir ./csv_output/doh_dataset
 ```
+```shell
+python main.py --explain --model_type BiLSTM --explain_checkpoint_path BiLSTM_best_model_checkpoint.pth --explain_data_dir ./csv_output/doh_dataset --data_dir ./csv_output/doh_dataset
+```
+```shell
+python main.py --explain --model_type BiGRU --explain_checkpoint_path BiGRU_best_model_checkpoint.pth --explain_data_dir ./csv_output/doh_dataset --data_dir ./csv_output/doh_dataset
+```
+```shell
+python main.py --explain --model_type CNN --explain_checkpoint_path CNN_best_model_checkpoint.pth --explain_data_dir ./csv_output/doh_dataset --data_dir ./csv_output/doh_dataset
+```
+
+
+```shell
+python main.py --explain --model_type RandomForest --explain_checkpoint_path RandomForest_best_model_checkpoint.pkl --explain_data_dir ./csv_output/doh_dataset --data_dir ./csv_output/doh_dataset
+```
+```shell
+python main.py --explain --model_type XGBoost --explain_checkpoint_path XGBoost_best_model_checkpoint.pkl --explain_data_dir ./csv_output/doh_dataset --data_dir ./csv_output/doh_dataset
+```
+
 ---
 ## Workflow
 

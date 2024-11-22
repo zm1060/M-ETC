@@ -237,7 +237,7 @@ def main():
     
     # Model configuration parameters
     parser.add_argument('--model_type', type=str, default='CNN_BiLSTM_Attention', 
-                        choices=['CNN_BiLSTM_Attention', 'CNN_BiGRU_Attention_Model', 'BiLSTM', 'BiGRU', 'CNN', 'CNN_BiGRU', 'CNN_BiLSTM'],
+                        choices=['CNN_BiLSTM_Attention', 'CNN_BiGRU_Attention_Model', 'BiLSTM', 'BiGRU', 'CNN', 'CNN_BiGRU', 'CNN_BiLSTM', 'RandomForest', 'XGBoost'],
                         help='Type of model architecture to use (e.g., CNN_BiLSTM_Attention, BiGRU, etc.).')
     parser.add_argument('--cnn_out_channels', type=int, default=64, help='Number of output channels for CNN layers.')
     parser.add_argument('--hidden_dim', type=int, default=64, help='Hidden size for LSTM/GRU layers.')
@@ -295,7 +295,6 @@ def main():
         X, y, scaler, label_encoder = preprocess_data(combined_data)
         input_dim = X.shape[1]
         output_dim = len(label_encoder.classes_)
-
         # Create or load consistent train-validation splits
         data_splits = create_data_splits(X, y, k_folds=args.k_folds, random_state=42)
         train_val_indices = data_splits['train_val_indices']
@@ -331,16 +330,22 @@ def main():
     if args.train:
         best_val_loss = float('inf')
         fold_metrics = []
+        aggregated_confusion_matrix = None  # 用于汇总所有折的混淆矩阵
+
         for fold, (train_idx, val_idx) in enumerate(train_val_indices, 1):
+            # 获取当前折的训练和验证数据
             X_train_fold, X_val_fold = X_train[train_idx], X_train[val_idx]
             y_train_fold, y_val_fold = y_train[train_idx], y_train[val_idx]
             train_loader, val_loader = get_dataloaders(X_train_fold, y_train_fold, batch_size=args.batch_size, sample_size=args.sample_size)
 
+            # 模型剪枝（可选）
             if args.prune > 0.0 and args.model_type in ['CNN_BiLSTM_Attention', 'CNN_BiGRU_Attention_Model', 'BiLSTM', 'BiGRU', 'CNN', 'CNN_BiGRU', 'CNN_BiLSTM']:
                 apply_pruning(model, amount=args.prune)
 
             dl_checkpoint_path = f"{args.model_type}_fold_{fold}_checkpoint.pth"
             ml_checkpoint_path = f"{args.model_type}_fold_{fold}_checkpoint.pkl"
+
+            # 训练和验证模型
             if args.model_type in ['RandomForest', 'XGBoost']:
                 metrics = train_baseline_model(model, args.model_type, X_train_fold, y_train_fold, X_val_fold, y_val_fold, ml_checkpoint_path, save_best=True, best_val_loss=best_val_loss)
             else:
@@ -361,10 +366,22 @@ def main():
                     best_val_loss=best_val_loss
                 )
 
+            # 检查是否成功返回指标
             if metrics:
                 fold_metrics.append(metrics)
+
+                # 获取每折的混淆矩阵并累加
+                fold_cm = np.array(metrics['val']['confusion_matrix'])
+                if aggregated_confusion_matrix is None:
+                    aggregated_confusion_matrix = fold_cm
+                else:
+                    aggregated_confusion_matrix += fold_cm
+
+                print(f"Fold {fold} Confusion Matrix:\n{fold_cm}")
             else:
                 logging.error(f"No metrics for Fold {fold}")
+
+            # 每折重新初始化模型
             model = initialize_model(
                 model_type=args.model_type,
                 input_dim=input_dim,
@@ -374,6 +391,8 @@ def main():
                 hidden_dim=args.hidden_dim,
                 num_layers=args.num_layers
             )
+
+        # 汇总每折的指标
         valid_metrics = [m for m in fold_metrics if m]
         if valid_metrics:
             avg_metrics = {
@@ -385,9 +404,13 @@ def main():
                 'phase': 'train',
                 'data_dir': args.data_dir,
                 **{f'train_{k}': v for k, v in avg_metrics['train'].items()},
-                **{f'val_{k}': v for k, v in avg_metrics['val'].items()}
+                **{f'val_{k}': v for k, v in avg_metrics['val'].items()},
+                'aggregated_confusion_matrix': aggregated_confusion_matrix.tolist(),  # 转换为列表以便JSON序列化
             }
+
+            # 记录汇总结果
             log_results(results)
+            print(f"Aggregated Confusion Matrix:\n{aggregated_confusion_matrix}")
         else:
             logging.error("No valid fold metrics collected")
 
@@ -522,6 +545,10 @@ def main():
             logging.info(f"Number of misclassified samples: {len(misclassified_indices)}")
             logging.info(f"Number of correctly classified samples: {len(correctly_classified_indices)}")
 
+            explain_data_dir = args.explain_data_dir
+            explain_data_dir = explain_data_dir.lstrip("./csv_output/")
+            explain_data_dir = explain_data_dir.replace("/", "_")
+
             # Generate SHAP explanations for misclassified samples
             if len(X_misclassified) > 0:
                 shap_values_misclassified = explain_with_shap(
@@ -529,12 +556,12 @@ def main():
                     X_sample=X_misclassified, 
                     device=device, 
                     feature_names=feature_names, 
-                    class_names=class_names, 
-                    model_type=args.model_type,
-                    db_name=args.explain_data_dir,
+                    class_names=class_names,
+                    origin_model_type=args.model_type,
+                    model_type=model_type,
+                    db_name=explain_data_dir,
                     description='misclassified_samples'
                 )
-
                 logging.info("SHAP explanations generated for misclassified samples.")
 
             # Generate SHAP explanations for correctly classified samples
@@ -545,12 +572,12 @@ def main():
                     device=device, 
                     feature_names=feature_names, 
                     class_names=class_names, 
-                    model_type=args.model_type,
-                    db_name=args.explain_data_dir,
+                    origin_model_type=args.model_type,
+                    model_type=model_type,
+                    db_name=explain_data_dir,
                     description='correct_samples'
                 )
                 logging.info("SHAP explanations generated for correctly classified samples.")
-
 
     logging.info("Completed all phases")
 

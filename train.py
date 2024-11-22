@@ -195,7 +195,6 @@ def train_baseline_model(model, model_type, X_train, y_train, X_val, y_val, chec
     Train and evaluate scikit-learn or XGBoost models with the ability to save the best model.
     """
     model.fit(X_train, y_train)
-    
     # Calculate train metrics
     y_train_pred = model.predict(X_train)
     y_train_pred_proba = model.predict_proba(X_train) if hasattr(model, "predict_proba") else None
@@ -205,7 +204,7 @@ def train_baseline_model(model, model_type, X_train, y_train, X_val, y_val, chec
     y_val_pred = model.predict(X_val)
     y_val_pred_proba = model.predict_proba(X_val) if hasattr(model, "predict_proba") else None
     val_metrics = calculate_metrics(y_val, y_val_pred, y_val_pred_proba)
-    
+
     # Save current model checkpoint
     joblib.dump(model, checkpoint_path)
     logging.info(f"Model saved at {checkpoint_path}")
