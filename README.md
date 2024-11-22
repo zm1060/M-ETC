@@ -60,8 +60,9 @@ Train a model using the specified architecture and dataset.
 ```shell
 python main.py --model_type XGBoost --train --epochs 10 --batch_size 64 --data_dir ./csv_output/Tunnel
 ```
+```shell
 python main.py --model_type XGBoost --train --epochs 10 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020
-
+```
 ```shell
 python main.py --model_type BiLSTM --train --epochs 10 --batch_size 64 --data_dir ./csv_output/doh_dataset
 ```

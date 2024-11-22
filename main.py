@@ -172,64 +172,105 @@ def get_optimizer(model, args):
     else:
         raise ValueError(f"Unsupported optimizer type: {args.optimizer}")
 
-def hyperparameter_search(param_grid, model_type, input_dim, output_dim, X_train, y_train, device, args):
-    """
-    Perform hyperparameter search over the specified parameter grid.
-
-    Args:
-        param_grid (dict): Dictionary containing the hyperparameters and their possible values.
-        model_type (str): Model architecture to use.
-        input_dim (int): Input feature dimension.
-        output_dim (int): Number of output classes.
-        X_train (np.ndarray): Training features.
-        y_train (np.ndarray): Training labels.
-        device (torch.device): Device for training (CPU or GPU).
-        args (argparse.Namespace): Other arguments for training.
-
-    Returns:
-        dict: Best hyperparameters and corresponding metrics.
-    """
+def hyperparameter_search(param_grid_tree, param_grid_dl, model_type, input_dim, output_dim, X_train, y_train, device, args):
     best_metrics = None
     best_params = None
 
-    # Iterate through all combinations of hyperparameters
-    for params in ParameterGrid(param_grid):
-        logging.info(f"Testing hyperparameters: {params}")
-        
-        # Initialize the model with current hyperparameters
-        model = initialize_model(
-            model_type=model_type,
-            input_dim=input_dim,
-            output_dim=output_dim,
-            device=device,
-            cnn_out_channels=params.get('cnn_out_channels', args.cnn_out_channels),
-            hidden_dim=params.get('hidden_dim', args.hidden_dim),
-            num_layers=params.get('num_layers', args.num_layers)
-        )
+    if model_type in ['RandomForest', 'XGBoost']:
+        # Tree-based model hyperparameter search
+        for params in ParameterGrid(param_grid_tree):
+            logging.info(f"Testing tree-based hyperparameters: {params}")
 
-        optimizer = get_optimizer(model, args, lr=params.get('lr', args.lr), weight_decay=params.get('weight_decay', args.weight_decay))
-        train_loader, val_loader = get_dataloaders(X_train, y_train, batch_size=params.get('batch_size', args.batch_size), sample_size=args.sample_size)
+            # Initialize model
+            model = initialize_model(
+                model_type=model_type,
+                input_dim=input_dim,
+                output_dim=output_dim,
+                device=device,
+                random_state=42
+            )
+            
+            # Apply parameter grid settings
+            model.set_params(**{k: v for k, v in params.items() if k in model.get_params()})
+            
+            # Split data for validation
+            X_train_split, X_val_split, y_train_split, y_val_split = train_test_split(
+                X_train, y_train, test_size=0.2, random_state=42, stratify=y_train
+            )
+            
+            # Train and evaluate
+            model.fit(X_train_split, y_train_split)
+            y_val_pred = model.predict(X_val_split)
+            y_val_pred_proba = model.predict_proba(X_val_split) if hasattr(model, "predict_proba") else None
+            
+            # Calculate metrics
+            metrics = calculate_metrics(y_val_split, y_val_pred, y_val_pred_proba)
+            logging.info(f"Tree-based model metrics: {metrics}")
 
-        # Train and evaluate the model
-        metrics = train_model(
-            model=model,
-            model_type=model_type,
-            train_loader=train_loader,
-            val_loader=val_loader,
-            device=device,
-            num_epochs=params.get('epochs', args.epochs),
-            optimizer=optimizer,
-            save_best=False
-        )
-        
-        # Update best parameters if metrics improve
-        if not best_metrics or metrics['val']['loss'] < best_metrics['val']['loss']:
-            best_metrics = metrics
-            best_params = params
+            # Compare based on accuracy or another metric
+            if not best_metrics or metrics['accuracy'] > best_metrics['accuracy']:
+                best_metrics = metrics
+                best_params = params
+
+    else:
+        # Deep learning model hyperparameter search
+        for params in ParameterGrid(param_grid_dl):
+            logging.info(f"Testing deep learning hyperparameters: {params}")
+
+            # Initialize model
+            model = initialize_model(
+                model_type=model_type,
+                input_dim=input_dim,
+                output_dim=output_dim,
+                device=device,
+                cnn_out_channels=params.get('cnn_out_channels', args.cnn_out_channels),
+                hidden_dim=params.get('hidden_dim', args.hidden_dim),
+                num_layers=params.get('num_layers', args.num_layers)
+            )
+
+            # Dynamically configure optimizer and other training hyperparameters
+            optimizer = Adam(
+                model.parameters(),
+                lr=params.get('lr', args.lr),
+                weight_decay=params.get('weight_decay', args.weight_decay)
+            )
+            
+            train_loader, val_loader = get_dataloaders(
+                X_train,
+                y_train,
+                batch_size=params.get('batch_size', args.batch_size),
+                sample_size=args.sample_size
+            )
+
+            # Train and evaluate
+            metrics = train_model(
+                model=model,
+                model_type=model_type,
+                train_loader=train_loader,
+                val_loader=val_loader,
+                device=device,
+                num_epochs=params.get('epochs', args.epochs),
+                lr=params.get('lr', args.lr),  # Pass learning rate
+                optimizer_type=args.optimizer,
+                momentum=args.momentum,
+                weight_decay=params.get('weight_decay', args.weight_decay),
+                checkpoint_path=None,  # No need to save checkpoints during search
+                resume=False,
+                save_best=False,
+                save_current=False,
+                best_val_loss=None
+            )
+            logging.info(f"Deep learning model metrics: {metrics}")
+
+            # Compare based on validation loss
+            if not best_metrics or metrics['val']['loss'] < best_metrics['val']['loss']:
+                best_metrics = metrics
+                best_params = params
 
     logging.info(f"Best Hyperparameters: {best_params}")
     logging.info(f"Best Metrics: {best_metrics}")
     return best_params, best_metrics
+
 
 def main():
     set_seed(42)
@@ -248,6 +289,7 @@ def main():
     parser.add_argument('--fine_tune', action='store_true', help='Flag to fine-tune the model.')
     parser.add_argument('--test', action='store_true', help='Flag to test the model.')
     parser.add_argument('--resume', action='store_true', help='Resume training from a saved checkpoint.')
+    parser.add_argument('--save_current', action='store_true', default=True, help='Flags to save the current model.')
 
     # Training parameters
     parser.add_argument('--prune', type=float, default=0.3, help='Pruning ratio for model compression.')
@@ -287,10 +329,11 @@ def main():
     logging.basicConfig(filename='logs/training.log', level=logging.INFO, 
                         format='%(asctime)s - %(levelname)s - %(message)s')
     logging.info("Started the training, testing, fine-tuning, and explanation process.")
-    
+    logging.info(f"Using model type: {args.model_type}")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     if args.data_dir:
         # Load and preprocess data
+        logging.info(f"Training data directory: {args.data_dir}")
         combined_data = load_data_from_directory(args.data_dir)
         X, y, scaler, label_encoder = preprocess_data(combined_data)
         input_dim = X.shape[1]
@@ -314,18 +357,37 @@ def main():
 
     # Hyperparameter search
     if args.hyperparameter_search:
-        param_grid = {
+        param_grid_tree = {
+            'n_estimators': [100, 200],
+            'max_depth': [10, 20, None],
+            'min_samples_split': [2, 5],
+            'min_samples_leaf': [1, 2],
+            'learning_rate': [0.01, 0.1]  # Only applicable to XGBoost
+        }
+        param_grid_dl = {
             'cnn_out_channels': [32, 64, 128],
             'hidden_dim': [64, 128],
             'num_layers': [1, 2],
             'batch_size': [32, 64],
-            'lr': [1e-4, 1e-3],
+            'lr': [1e-4, 1e-3, 1e-2],
             'weight_decay': [0.01, 0.001],
             'epochs': [30, 50]
         }
-        best_params, best_metrics = hyperparameter_search(param_grid, args.model_type, input_dim, output_dim, X, y, device, args)
+
+        best_params, best_metrics = hyperparameter_search(
+            param_grid_tree=param_grid_tree,
+            param_grid_dl=param_grid_dl,
+            model_type=args.model_type,
+            input_dim=input_dim,
+            output_dim=output_dim,
+            X_train=X,
+            y_train=y,
+            device=device,
+            args=args
+        )
         logging.info(f"Hyperparameter Search Completed. Best Params: {best_params}, Best Metrics: {best_metrics}")
 
+        
     # Cross-validation training phase
     if args.train:
         best_val_loss = float('inf')
@@ -363,6 +425,7 @@ def main():
                     checkpoint_path=dl_checkpoint_path,
                     resume=args.resume,
                     save_best=True, 
+                    save_current=args.save_current,
                     best_val_loss=best_val_loss
                 )
 
@@ -416,6 +479,7 @@ def main():
 
     # Fine-tuning phase
     if args.fine_tune:
+        logging.info(f"Fine-tuning data directory: {args.fine_tune_data_dir}")
         # 1. Load and preprocess fine-tuning data
         fine_tune_data = load_data_from_directory(args.fine_tune_data_dir)
         X_fine_tune, y_fine_tune, _, _ = preprocess_data(fine_tune_data)
@@ -460,6 +524,7 @@ def main():
 
     # Testing phase on new test data
     if args.test:
+        logging.info(f"Test data directory: {args.test_data_dir}")
         test_data = load_data_from_directory(args.test_data_dir)
         X_test, y_test, _, _ = preprocess_data(test_data)
 

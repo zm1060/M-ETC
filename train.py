@@ -114,7 +114,7 @@ def evaluate_model(model, val_loader, device, criterion):
 
     return metrics
 
-def train_model(model, model_type, train_loader, val_loader, device, num_epochs=100, lr=1e-4, optimizer_type='adam', momentum=0.9, weight_decay=0.01, checkpoint_path='model_checkpoint.pth', resume=False, save_best=True, best_val_loss=float('inf')):
+def train_model(model, model_type, train_loader, val_loader, device, num_epochs=100, lr=1e-4, optimizer_type='adam', momentum=0.9, weight_decay=0.01, checkpoint_path='model_checkpoint.pth', resume=False, save_best=True, save_current=True, best_val_loss=float('inf')):
     """
     Train the model and validate on the validation set.
     """
@@ -169,7 +169,8 @@ def train_model(model, model_type, train_loader, val_loader, device, num_epochs=
             scheduler.step(val_metrics['loss'])
 
             # Save current model checkpoint
-            save_model(model, optimizer, epoch + 1, checkpoint_path)
+            if save_current:
+                save_model(model, optimizer, epoch + 1, checkpoint_path)
             # Save best model checkpoint
             if save_best and val_metrics['loss'] < best_val_loss:
                 best_val_loss = val_metrics['loss']
