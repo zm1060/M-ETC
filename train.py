@@ -1,5 +1,6 @@
 # train.py
 import os
+import time
 import joblib
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
@@ -91,6 +92,7 @@ def evaluate_model(model, val_loader, device, criterion):
     """
     Evaluate the model on the validation set and compute various metrics.
     """
+    start_time = time.time()
     model.eval()
     val_loss = 0
     val_preds = []
@@ -108,7 +110,9 @@ def evaluate_model(model, val_loader, device, criterion):
             all_probs.extend(probs.cpu().numpy())
             val_preds.extend(torch.argmax(probs, dim=1).cpu().numpy())
             val_labels.extend(y_val_batch.cpu().numpy())
-
+    end_time = time.time()
+    inference_time = end_time - start_time
+    logging.info(f"Inference time: {inference_time:.2f} seconds")
     metrics = calculate_metrics(val_labels, val_preds, all_probs)
     metrics['loss'] = val_loss / len(val_loader)
 
@@ -138,8 +142,9 @@ def train_model(model, model_type, train_loader, val_loader, device, num_epochs=
         # Load model if resuming
         if resume:
             model, optimizer, start_epoch = load_model(model, optimizer, checkpoint_path)
-
         for epoch in range(start_epoch, num_epochs):
+            start_time = time.time()
+
             model.train()
             total_loss = 0
             train_preds, train_labels = [], []
@@ -155,15 +160,18 @@ def train_model(model, model_type, train_loader, val_loader, device, num_epochs=
                 total_loss += loss.item()
                 train_preds.extend(torch.argmax(outputs, dim=1).cpu().numpy())
                 train_labels.extend(y_batch.cpu().numpy())
-
+            end_time = time.time()
+            train_time = end_time - start_time
+            logging.info(f"Train time: {train_time:.2f} seconds")
             avg_train_loss = total_loss / len(train_loader)
             train_metrics = calculate_metrics(train_labels, train_preds)
-            logging.info(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {avg_train_loss:.4f}, Train Metrics: {train_metrics}")
-            print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {avg_train_loss:.4f}, Train Metrics: {train_metrics}")
             
             # Validation
             val_metrics = evaluate_model(model, val_loader, device, criterion)
-            logging.info(f"Epoch {epoch+1} Validation Metrics: {val_metrics}")
+            logging.info(f"Epoch {epoch+1}/{num_epochs}, Train Metrics: {train_metrics}, Train Loss: {avg_train_loss:.4f}, ")
+            logging.info(f"Epoch {epoch+1}/{num_epochs}, Validation Metrics: {val_metrics}")
+            
+            print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {avg_train_loss:.4f}, Train Metrics: {train_metrics}")
             print(f"Epoch {epoch+1} Validation Metrics: {val_metrics}")
 
             scheduler.step(val_metrics['loss'])
@@ -175,7 +183,7 @@ def train_model(model, model_type, train_loader, val_loader, device, num_epochs=
             if save_best and val_metrics['loss'] < best_val_loss:
                 best_val_loss = val_metrics['loss']
                 save_model(model, optimizer, epoch + 1, f'{model_type}_best_model_checkpoint.pth')
-                logging.info(f"Best model updated at epoch {epoch+1} with val_loss {best_val_loss:.4f}")
+                # logging.info(f"Best model updated at epoch {epoch+1} with val_loss {best_val_loss:.4f}")
                 print(f"Best model updated at epoch {epoch+1} with val_loss {best_val_loss:.4f}")
 
             # Update final metrics after each epoch
@@ -184,7 +192,7 @@ def train_model(model, model_type, train_loader, val_loader, device, num_epochs=
                 'val': val_metrics
             }
 
-            logging.info(final_metrics)
+            # logging.info(final_metrics)
 
         return final_metrics
     except Exception as e:
@@ -195,32 +203,38 @@ def train_baseline_model(model, model_type, X_train, y_train, X_val, y_val, chec
     """
     Train and evaluate scikit-learn or XGBoost models with the ability to save the best model.
     """
+    start_time = time.time()
     model.fit(X_train, y_train)
+    end_time = time.time()
+    train_time = end_time - start_time
+    logging.info(f"Train time: {train_time:.2f} seconds")
     # Calculate train metrics
     y_train_pred = model.predict(X_train)
     y_train_pred_proba = model.predict_proba(X_train) if hasattr(model, "predict_proba") else None
     train_metrics = calculate_metrics(y_train, y_train_pred, y_train_pred_proba)
-
     # Calculate validation metrics
+    start_time = time.time()
     y_val_pred = model.predict(X_val)
     y_val_pred_proba = model.predict_proba(X_val) if hasattr(model, "predict_proba") else None
     val_metrics = calculate_metrics(y_val, y_val_pred, y_val_pred_proba)
-
+    end_time = time.time()
+    inference_time = end_time - start_time
+    logging.info(f"Inference time: {inference_time:.2f} seconds")
     # Save current model checkpoint
     joblib.dump(model, checkpoint_path)
-    logging.info(f"Model saved at {checkpoint_path}")
+    # logging.info(f"Model saved at {checkpoint_path}")
     
     # Save the best model if required
     if save_best and val_metrics['loss'] < best_val_loss:
         best_val_loss = val_metrics['loss']
         best_checkpoint_path = f'{model_type}_best_model_checkpoint.pkl'
         joblib.dump(model, best_checkpoint_path)
-        logging.info(f"Best model updated with val_loss {best_val_loss:.4f}")
+        # logging.info(f"Best model updated with val_loss {best_val_loss:.4f}")
         print(f"Best model updated with val_loss {best_val_loss:.4f}")
 
     # Log and return metrics
     metrics = {'train': train_metrics, 'val': val_metrics}
-    logging.info(metrics)
+    logging.info(f"{metrics}")
     return metrics
 
 

@@ -58,22 +58,22 @@ Train a model using the specified architecture and dataset.
 
 #### Example Commands
 ```shell
-python main.py --model_type XGBoost --train --epochs 10 --batch_size 64 --data_dir ./csv_output/Tunnel
+python main.py --model_type XGBoost --train --epochs 100 --batch_size 64 --data_dir ./csv_output/Tunnel
 ```
 ```shell
-python main.py --model_type XGBoost --train --epochs 10 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020
+python main.py --model_type XGBoost --train --epochs 100 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020
 ```
 ```shell
-python main.py --model_type BiLSTM --train --epochs 10 --batch_size 64 --data_dir ./csv_output/doh_dataset
+python main.py --model_type BiLSTM --train --epochs 100 --batch_size 64 --data_dir ./csv_output/doh_dataset
 ```
 ```shell
-python main.py --model_type CNN_BiLSTM_Attention --train --epochs 10 --batch_size 64 --data_dir ./csv_output/doh_dataset
+python main.py --model_type CNN_BiLSTM_Attention --train --epochs 100 --batch_size 64 --data_dir ./csv_output/doh_dataset
 ```
 ```shell
-python main.py --model_type XGBoost --train --epochs 10 --batch_size 64 --data_dir ./csv_output/doh_dataset
+python main.py --model_type XGBoost --train --epochs 100 --batch_size 64 --data_dir ./csv_output/doh_dataset
 ```
 ```shell
-python main.py --model_type RandomForest --train --epochs 10 --batch_size 64 --data_dir ./csv_output/doh_dataset
+python main.py --model_type RandomForest --train --epochs 100 --batch_size 64 --data_dir ./csv_output/doh_dataset
 ```
 ---
 

@@ -1,3 +1,4 @@
+import time
 import joblib
 import torch
 import logging
@@ -31,8 +32,8 @@ def set_seed(seed=42):
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
-def create_data_splits(X, y, k_folds=5, random_state=42, split_file='data_splits.pkl'):
-    if os.path.exists(split_file):
+def create_data_splits(use_exist, X, y, k_folds=5, random_state=42, split_file='data_splits.pkl'):
+    if use_exist and os.path.exists(split_file):
         splits = joblib.load(split_file)
         return splits
 
@@ -47,8 +48,8 @@ def create_data_splits(X, y, k_folds=5, random_state=42, split_file='data_splits
     joblib.dump(splits, split_file)
     return splits
 
-def create_fine_tune_splits(X_fine_tune, y_fine_tune, test_size=0.1, random_state=42, split_file='fine_tune_splits.pkl'):
-    if os.path.exists(split_file):
+def create_fine_tune_splits(use_exist, X_fine_tune, y_fine_tune, test_size=0.1, random_state=42, split_file='fine_tune_splits.pkl'):
+    if use_exist and os.path.exists(split_file):
         splits = joblib.load(split_file)
         return splits
 
@@ -322,6 +323,7 @@ def main():
     # Explain
     parser.add_argument('--explain', action='store_true', help='Enable explainability for model predictions.')
     parser.add_argument('--explain_checkpoint_path', type=str, default='explain_checkpoint.pth', help='Path to load checkpoint for explaining.')
+    parser.add_argument('--use_exist', action='store_true', help='')
 
     args = parser.parse_args()
 
@@ -339,7 +341,7 @@ def main():
         input_dim = X.shape[1]
         output_dim = len(label_encoder.classes_)
         # Create or load consistent train-validation splits
-        data_splits = create_data_splits(X, y, k_folds=args.k_folds, random_state=42)
+        data_splits = create_data_splits(args.use_exist, X, y, k_folds=args.k_folds, random_state=42)
         train_val_indices = data_splits['train_val_indices']
         X_train, y_train = data_splits['train_data']
     else:            
@@ -362,7 +364,7 @@ def main():
             'max_depth': [10, 20, None],
             'min_samples_split': [2, 5],
             'min_samples_leaf': [1, 2],
-            'learning_rate': [0.01, 0.1]  # Only applicable to XGBoost
+            'learning_rate': [0.001, 0.01, 0.1]  # Only applicable to tree-base model
         }
         param_grid_dl = {
             'cnn_out_channels': [32, 64, 128],
@@ -399,14 +401,14 @@ def main():
             X_train_fold, X_val_fold = X_train[train_idx], X_train[val_idx]
             y_train_fold, y_val_fold = y_train[train_idx], y_train[val_idx]
             train_loader, val_loader = get_dataloaders(X_train_fold, y_train_fold, batch_size=args.batch_size, sample_size=args.sample_size)
-
+            print(X_train_fold.shape[0])
+            print(X_val_fold.shape[0])
             # 模型剪枝（可选）
             if args.prune > 0.0 and args.model_type in ['CNN_BiLSTM_Attention', 'CNN_BiGRU_Attention_Model', 'BiLSTM', 'BiGRU', 'CNN', 'CNN_BiGRU', 'CNN_BiLSTM']:
                 apply_pruning(model, amount=args.prune)
 
             dl_checkpoint_path = f"{args.model_type}_fold_{fold}_checkpoint.pth"
             ml_checkpoint_path = f"{args.model_type}_fold_{fold}_checkpoint.pkl"
-
             # 训练和验证模型
             if args.model_type in ['RandomForest', 'XGBoost']:
                 metrics = train_baseline_model(model, args.model_type, X_train_fold, y_train_fold, X_val_fold, y_val_fold, ml_checkpoint_path, save_best=True, best_val_loss=best_val_loss)
@@ -428,7 +430,6 @@ def main():
                     save_current=args.save_current,
                     best_val_loss=best_val_loss
                 )
-
             # 检查是否成功返回指标
             if metrics:
                 fold_metrics.append(metrics)
@@ -473,6 +474,7 @@ def main():
 
             # 记录汇总结果
             log_results(results)
+            logging.info(f"Total Results: {results}")
             print(f"Aggregated Confusion Matrix:\n{aggregated_confusion_matrix}")
         else:
             logging.error("No valid fold metrics collected")
@@ -485,7 +487,7 @@ def main():
         X_fine_tune, y_fine_tune, _, _ = preprocess_data(fine_tune_data)
         
         # 2. Load or create fixed fine-tuning splits
-        fine_tune_splits = create_fine_tune_splits(X_fine_tune, y_fine_tune)
+        fine_tune_splits = create_fine_tune_splits(args.use_exist, X_fine_tune, y_fine_tune)
         fine_tune_train_indices = fine_tune_splits['fine_tune_train_indices']
         fine_tune_val_indices = fine_tune_splits['fine_tune_val_indices']
         

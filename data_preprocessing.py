@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import torch
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.preprocessing import LabelEncoder, MinMaxScaler, StandardScaler
 from torch.utils.data import TensorDataset, DataLoader
 
 def load_data_from_directory(directory_path):
@@ -53,7 +53,9 @@ def preprocess_data(data, label_column='Label'):
 
     print(f"Feature matrix shape: {X.shape}")
 
-    scaler = StandardScaler()
+    # scaler = StandardScaler()
+    scaler = MinMaxScaler()
+
     X = scaler.fit_transform(X)
 
     return X, y, scaler, label_encoder

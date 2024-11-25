@@ -194,7 +194,7 @@ class CNN_BiGRU(nn.Module):
     def __init__(self, input_dim, cnn_out_channels, gru_hidden_dim, gru_layers, output_dim):
         super(CNN_BiGRU, self).__init__()
         
-        # CNN部分
+        # CNN
         self.cnn = nn.Sequential(
             nn.Conv1d(in_channels=1, out_channels=cnn_out_channels, kernel_size=3, padding=1),
             nn.ReLU(),
@@ -202,7 +202,7 @@ class CNN_BiGRU(nn.Module):
             nn.Dropout(0.3)
         )
         
-        # BiGRU部分
+        # BiGRU
         self.gru = nn.GRU(
             input_size=cnn_out_channels,
             hidden_size=gru_hidden_dim,
@@ -211,7 +211,6 @@ class CNN_BiGRU(nn.Module):
             bidirectional=True
         )
         
-        # 全连接层
         self.fc = nn.Sequential(
             nn.Linear(gru_hidden_dim * 2, 128),
             nn.ReLU(),
@@ -221,10 +220,10 @@ class CNN_BiGRU(nn.Module):
     
     def forward(self, x):
         x = x.unsqueeze(1)  # (batch_size, 1, seq_length)
-        x = self.cnn(x)      # CNN特征提取
-        x = x.transpose(1, 2)  # 转换为 (batch_size, seq_length, features) 以供GRU使用
+        x = self.cnn(x)      # CNN
+        x = x.transpose(1, 2)  # (batch_size, seq_length, features) 用
         gru_out, _ = self.gru(x)
-        output = self.fc(gru_out[:, -1, :])  # 使用最后时间步的特征
+        output = self.fc(gru_out[:, -1, :])
         return output
     
 
@@ -232,7 +231,7 @@ class CNN_BiLSTM(nn.Module):
     def __init__(self, input_dim, cnn_out_channels, lstm_hidden_dim, lstm_layers, output_dim):
         super(CNN_BiLSTM, self).__init__()
         
-        # CNN部分
+        # CNN
         self.cnn = nn.Sequential(
             nn.Conv1d(in_channels=1, out_channels=cnn_out_channels, kernel_size=3, padding=1),
             nn.ReLU(),
@@ -240,7 +239,7 @@ class CNN_BiLSTM(nn.Module):
             nn.Dropout(0.3)
         )
         
-        # BiLSTM部分
+        # BiLSTM
         self.lstm = nn.LSTM(
             input_size=cnn_out_channels,
             hidden_size=lstm_hidden_dim,
@@ -249,7 +248,6 @@ class CNN_BiLSTM(nn.Module):
             bidirectional=True
         )
         
-        # 全连接层
         self.fc = nn.Sequential(
             nn.Linear(lstm_hidden_dim * 2, 128),
             nn.ReLU(),
@@ -258,9 +256,9 @@ class CNN_BiLSTM(nn.Module):
         )
     
     def forward(self, x):
-        x = x.unsqueeze(1)  # 添加通道维度: (batch_size, 1, seq_length)
-        x = self.cnn(x)      # CNN特征提取
-        x = x.transpose(1, 2)  # 转换为 (batch_size, seq_length // 2, cnn_out_channels) 以供LSTM使用
-        lstm_out, _ = self.lstm(x)  # LSTM提取序列信息
-        output = self.fc(lstm_out[:, -1, :])  # 使用最后时间步的特征
+        x = x.unsqueeze(1)  #  (batch_size, 1, seq_length)
+        x = self.cnn(x)      # CNN
+        x = x.transpose(1, 2)  #  (batch_size, seq_length // 2, cnn_out_channels) 以
+        lstm_out, _ = self.lstm(x)  # LSTM
+        output = self.fc(lstm_out[:, -1, :])
         return output
