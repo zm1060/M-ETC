@@ -234,9 +234,10 @@ class CNN_BiLSTM(nn.Module):
         # CNN
         self.cnn = nn.Sequential(
             nn.Conv1d(in_channels=1, out_channels=cnn_out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm1d(cnn_out_channels),
             nn.ReLU(),
             nn.MaxPool1d(kernel_size=2),
-            nn.Dropout(0.3)
+            nn.Dropout(0.2)
         )
         
         # BiLSTM
@@ -248,17 +249,18 @@ class CNN_BiLSTM(nn.Module):
             bidirectional=True
         )
         
+        # Fully Connected Layers
         self.fc = nn.Sequential(
             nn.Linear(lstm_hidden_dim * 2, 128),
             nn.ReLU(),
-            nn.Dropout(0.3),
+            nn.Dropout(0.2),
             nn.Linear(128, output_dim)
         )
     
     def forward(self, x):
-        x = x.unsqueeze(1)  #  (batch_size, 1, seq_length)
-        x = self.cnn(x)      # CNN
-        x = x.transpose(1, 2)  #  (batch_size, seq_length // 2, cnn_out_channels) 以
-        lstm_out, _ = self.lstm(x)  # LSTM
-        output = self.fc(lstm_out[:, -1, :])
+        x = x.unsqueeze(1)  # (batch_size, 1, seq_length)
+        x = self.cnn(x)     # (batch_size, cnn_out_channels, seq_length // 2)
+        x = x.transpose(1, 2)  # (batch_size, seq_length // 2, cnn_out_channels)
+        lstm_out, _ = self.lstm(x)  # LSTM output
+        output = self.fc(lstm_out[:, -1, :])  # Use the last LSTM output
         return output

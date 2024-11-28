@@ -148,7 +148,7 @@ def train_model(model, model_type, train_loader, val_loader, device, num_epochs=
             model.train()
             total_loss = 0
             train_preds, train_labels = [], []
-
+            train_pred_proba = []
             for X_batch, y_batch in train_loader:
                 X_batch, y_batch = X_batch.to(device), y_batch.to(device)
                 optimizer.zero_grad()
@@ -160,19 +160,19 @@ def train_model(model, model_type, train_loader, val_loader, device, num_epochs=
                 total_loss += loss.item()
                 train_preds.extend(torch.argmax(outputs, dim=1).cpu().numpy())
                 train_labels.extend(y_batch.cpu().numpy())
+                train_pred_proba.extend(torch.softmax(outputs, dim=1).detach().cpu().numpy())            
             end_time = time.time()
             train_time = end_time - start_time
             logging.info(f"Train time: {train_time:.2f} seconds")
             avg_train_loss = total_loss / len(train_loader)
-            train_metrics = calculate_metrics(train_labels, train_preds)
-            
+            train_metrics = calculate_metrics(train_labels, train_preds, train_pred_proba)            
             # Validation
             val_metrics = evaluate_model(model, val_loader, device, criterion)
-            logging.info(f"Epoch {epoch+1}/{num_epochs}, Train Metrics: {train_metrics}, Train Loss: {avg_train_loss:.4f}, ")
+            logging.info(f"Epoch {epoch+1}/{num_epochs}, Train Metrics: {train_metrics}")
             logging.info(f"Epoch {epoch+1}/{num_epochs}, Validation Metrics: {val_metrics}")
             
-            print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {avg_train_loss:.4f}, Train Metrics: {train_metrics}")
-            print(f"Epoch {epoch+1} Validation Metrics: {val_metrics}")
+            print(f"Epoch {epoch+1}/{num_epochs}, Train Metrics: {train_metrics}")
+            print(f"Epoch {epoch+1}/{num_epochs}, Validation Metrics: {val_metrics}")
 
             scheduler.step(val_metrics['loss'])
 
@@ -191,9 +191,7 @@ def train_model(model, model_type, train_loader, val_loader, device, num_epochs=
                 'train': train_metrics,
                 'val': val_metrics
             }
-
             # logging.info(final_metrics)
-
         return final_metrics
     except Exception as e:
         logging.error(f"Error during training: {str(e)}")
