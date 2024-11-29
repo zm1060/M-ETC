@@ -164,7 +164,6 @@ def train_model(model, model_type, train_loader, val_loader, device, num_epochs=
             end_time = time.time()
             train_time = end_time - start_time
             logging.info(f"Train time: {train_time:.2f} seconds")
-            avg_train_loss = total_loss / len(train_loader)
             train_metrics = calculate_metrics(train_labels, train_preds, train_pred_proba)            
             # Validation
             val_metrics = evaluate_model(model, val_loader, device, criterion)
@@ -175,7 +174,6 @@ def train_model(model, model_type, train_loader, val_loader, device, num_epochs=
             print(f"Epoch {epoch+1}/{num_epochs}, Validation Metrics: {val_metrics}")
 
             scheduler.step(val_metrics['loss'])
-
             # Save current model checkpoint
             if save_current:
                 save_model(model, optimizer, epoch + 1, checkpoint_path)

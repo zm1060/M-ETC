@@ -1,29 +1,7 @@
 # model.py
 import torch
 import torch.nn as nn
-
-class CNN(nn.Module):
-    def __init__(self, input_dim, cnn_out_channels, output_dim):
-        super(CNN, self).__init__()
-        self.cnn = nn.Sequential(
-            nn.Conv1d(in_channels=1, out_channels=cnn_out_channels, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool1d(kernel_size=2),
-            nn.Dropout(0.3)
-        )
-        self.fc = nn.Sequential(
-            nn.Linear((input_dim // 2) * cnn_out_channels, 128),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(128, output_dim)
-        )
-
-    def forward(self, x):
-        x = x.unsqueeze(1)  # (batch_size, 1, seq_length)
-        x = self.cnn(x)      # CNN for feature exatraction
-        x = x.view(x.size(0), -1)  # Flatten for FC layer
-        output = self.fc(x)
-        return output
+import torch.nn.functional as F
 
 class Attention(nn.Module):
     def __init__(self, hidden_dim):
@@ -36,97 +14,41 @@ class Attention(nn.Module):
         context_vector = torch.sum(lstm_out * attention_weights.unsqueeze(-1), dim=1)
         return context_vector, attention_weights
 
-class CNN_BiLSTM_Attention_Model(nn.Module):
-    def __init__(self, input_dim, cnn_out_channels, lstm_hidden_dim, lstm_layers, output_dim):
-        super(CNN_BiLSTM_Attention_Model, self).__init__()
+class CNN_Model(nn.Module):
+    def __init__(self, input_dim, cnn_out_channels, output_dim):
+        super(CNN_Model, self).__init__()
         
-        # CNN部分
+        # CNN with residual connection
         self.cnn = nn.Sequential(
-            nn.Conv1d(in_channels=1, out_channels=cnn_out_channels, kernel_size=3, padding=1),
+            nn.Conv1d(1, cnn_out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm1d(cnn_out_channels),
+            nn.ReLU(),
+            nn.Conv1d(cnn_out_channels, cnn_out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm1d(cnn_out_channels),
             nn.ReLU(),
             nn.MaxPool1d(kernel_size=2),
             nn.Dropout(0.3)
         )
         
-        # BiLSTM部分
-        self.lstm = nn.LSTM(
-            input_size=cnn_out_channels,
-            hidden_size=lstm_hidden_dim,
-            num_layers=lstm_layers,
-            batch_first=True,
-            bidirectional=True
-        )
-        
-        # Attention层
-        self.attention = Attention(lstm_hidden_dim)
-        
-        # 全连接层
+        # Fully connected layers
         self.fc = nn.Sequential(
-            nn.Linear(lstm_hidden_dim * 2, 128),
+            nn.Linear((input_dim // 2) * cnn_out_channels, 128),
             nn.ReLU(),
             nn.Dropout(0.3),
             nn.Linear(128, output_dim)
         )
     
     def forward(self, x):
-        x = x.unsqueeze(1)  # (batch_size, 1, seq_length)
+        x = x.unsqueeze(1)  # Add channel dimension
         x = self.cnn(x)
-        x = x.transpose(1, 2)  # 转换为 (batch_size, seq_length, features) 以供LSTM使用
-        lstm_out, _ = self.lstm(x)
-        
-        # 加入注意力机制
-        context_vector, attention_weights = self.attention(lstm_out)
-        
-        output = self.fc(context_vector)
+        x = x.view(x.size(0), -1)  # Flatten for FC layer
+        output = self.fc(x)
         return output
 
-class CNN_BiGRU_Attention_Model(nn.Module):
-    def __init__(self, input_dim, cnn_out_channels, gru_hidden_dim, gru_layers, output_dim):
-        super(CNN_BiGRU_Attention_Model, self).__init__()
-        
-        # CNN部分
-        self.cnn = nn.Sequential(
-            nn.Conv1d(in_channels=1, out_channels=cnn_out_channels, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool1d(kernel_size=2),
-            nn.Dropout(0.3)
-        )
-        
-        # BiGRU部分
-        self.gru = nn.GRU(
-            input_size=cnn_out_channels,
-            hidden_size=gru_hidden_dim,
-            num_layers=gru_layers,
-            batch_first=True,
-            bidirectional=True
-        )
-        
-        # Attention层
-        self.attention = Attention(gru_hidden_dim)
-        
-        # 全连接层
-        self.fc = nn.Sequential(
-            nn.Linear(gru_hidden_dim * 2, 128),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(128, output_dim)
-        )
-    
-    def forward(self, x):
-        x = x.unsqueeze(1)  # (batch_size, 1, seq_length)
-        x = self.cnn(x)      # CNN特征提取
-        x = x.transpose(1, 2)  # 转换为 (batch_size, seq_length, features) 以供GRU使用
-        gru_out, _ = self.gru(x)
-        
-        # 加入注意力机制
-        context_vector, attention_weights = self.attention(gru_out)
-        
-        output = self.fc(context_vector)
-        return output
 
-class BiLSTM(nn.Module):
+class BiLSTM_Model(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim, dropout1=0.2, dropout2=0):
-        super(BiLSTM, self).__init__()
+        super(BiLSTM_Model, self).__init__()
         # First LSTM layer
         self.lstm1 = nn.LSTM(input_dim, hidden_dim, batch_first=True, bidirectional=True)
         self.dropout1 = nn.Dropout(dropout1) if dropout1 else nn.Identity()
@@ -155,9 +77,9 @@ class BiLSTM(nn.Module):
         
         return output
 
-class BiGRU(nn.Module):
+class BiGRU_Model(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim, dropout1=0.2, dropout2=0):
-        super(BiGRU, self).__init__()
+        super(BiGRU_Model, self).__init__()
         # First GRU layer
         self.gru1 = nn.GRU(input_dim, hidden_dim, batch_first=True, bidirectional=True)
         self.dropout1 = nn.Dropout(dropout1) if dropout1 else nn.Identity()
@@ -190,57 +112,68 @@ class BiGRU(nn.Module):
         return output
     
 
-class CNN_BiGRU(nn.Module):
-    def __init__(self, input_dim, cnn_out_channels, gru_hidden_dim, gru_layers, output_dim):
-        super(CNN_BiGRU, self).__init__()
+class CNN_BiGRU_Model(nn.Module):
+    def __init__(self, input_dim, cnn_out_channels, gru_hidden_dim, gru_layers, output_dim, dropout=0.3, gru_dropout=0.3):
+        super(CNN_BiGRU_Model, self).__init__()
         
-        # CNN
+        # CNN Layer
         self.cnn = nn.Sequential(
             nn.Conv1d(in_channels=1, out_channels=cnn_out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm1d(cnn_out_channels),
+            nn.ReLU(),
+            nn.Conv1d(cnn_out_channels, cnn_out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm1d(cnn_out_channels),
             nn.ReLU(),
             nn.MaxPool1d(kernel_size=2),
-            nn.Dropout(0.3)
+            nn.Dropout(dropout)
         )
         
-        # BiGRU
+        # BiGRU Layer
         self.gru = nn.GRU(
             input_size=cnn_out_channels,
             hidden_size=gru_hidden_dim,
             num_layers=gru_layers,
             batch_first=True,
-            bidirectional=True
+            bidirectional=True,
+            dropout=gru_dropout
         )
         
+        # Fully connected layer
         self.fc = nn.Sequential(
             nn.Linear(gru_hidden_dim * 2, 128),
             nn.ReLU(),
-            nn.Dropout(0.3),
+            nn.Dropout(dropout),
             nn.Linear(128, output_dim)
         )
     
     def forward(self, x):
-        x = x.unsqueeze(1)  # (batch_size, 1, seq_length)
-        x = self.cnn(x)      # CNN
-        x = x.transpose(1, 2)  # (batch_size, seq_length, features) 用
+        x = x.unsqueeze(1)
+        x = self.cnn(x)
+        x = x.transpose(1, 2)
+        
         gru_out, _ = self.gru(x)
-        output = self.fc(gru_out[:, -1, :])
+        output = self.fc(gru_out[:, -1, :])  # Using last time step
         return output
+
     
 
-class CNN_BiLSTM(nn.Module):
+class CNN_BiLSTM_Model(nn.Module):
     def __init__(self, input_dim, cnn_out_channels, lstm_hidden_dim, lstm_layers, output_dim):
-        super(CNN_BiLSTM, self).__init__()
+        super(CNN_BiLSTM_Model, self).__init__()
         
-        # CNN
+        # CNN with residual connection
         self.cnn = nn.Sequential(
-            nn.Conv1d(in_channels=1, out_channels=cnn_out_channels, kernel_size=3, padding=1),
+            nn.Conv1d(1, cnn_out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm1d(cnn_out_channels),
+            nn.ReLU(),
+            nn.Conv1d(cnn_out_channels, cnn_out_channels, kernel_size=3, padding=1),
             nn.BatchNorm1d(cnn_out_channels),
             nn.ReLU(),
             nn.MaxPool1d(kernel_size=2),
-            nn.Dropout(0.2)
+            nn.Dropout(0.3)
         )
         
-        # BiLSTM
+        # BiLSTM with LayerNorm
         self.lstm = nn.LSTM(
             input_size=cnn_out_channels,
             hidden_size=lstm_hidden_dim,
@@ -248,19 +181,312 @@ class CNN_BiLSTM(nn.Module):
             batch_first=True,
             bidirectional=True
         )
-        
-        # Fully Connected Layers
+        self.layer_norm = nn.LayerNorm(lstm_hidden_dim * 2)
+
+        # Fully connected layers
         self.fc = nn.Sequential(
             nn.Linear(lstm_hidden_dim * 2, 128),
             nn.ReLU(),
-            nn.Dropout(0.2),
+            nn.Dropout(0.3),
             nn.Linear(128, output_dim)
         )
     
     def forward(self, x):
+        x = x.unsqueeze(1)  # Add channel dimension
+        cnn_out = self.cnn(x)
+        cnn_out = cnn_out.transpose(1, 2)  # (batch_size, seq_length, features)
+        
+        lstm_out, _ = self.lstm(cnn_out)
+        lstm_out = self.layer_norm(lstm_out)
+
+        output = self.fc(lstm_out[:, -1, :])  # Use the last time step
+        return output
+
+class CAttention(nn.Module):
+    def __init__(self, hidden_size):
+        super(CAttention, self).__init__()
+        self.attn = nn.Linear(hidden_size, 1)
+
+    def forward(self, x):
+        # x: (batch_size, seq_length, cnn_out_channels)
+        attn_weights = torch.softmax(self.attn(x), dim=1)  # (batch_size, seq_length, 1)
+        context_vector = torch.sum(attn_weights * x, dim=1)  # (batch_size, cnn_out_channels)
+        return context_vector, attn_weights
+
+class CNN_Attention_Model(nn.Module):
+    def __init__(self, input_dim, cnn_out_channels, output_dim):
+        super(CNN_Attention_Model, self).__init__()
+        
+        # CNN with residual connection
+        self.cnn = nn.Sequential(
+            nn.Conv1d(1, cnn_out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm1d(cnn_out_channels),
+            nn.ReLU(),
+            nn.Conv1d(cnn_out_channels, cnn_out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm1d(cnn_out_channels),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=2),
+            nn.Dropout(0.3)
+        )
+
+        # Attention mechanism
+        self.attention = CAttention(cnn_out_channels)
+
+        # Fully connected layers
+        self.fc = nn.Sequential(
+            nn.Linear(cnn_out_channels, 128),  # The expected input is cnn_out_channels
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(128, output_dim)
+        )
+    
+    def forward(self, x):
+        # Add channel dimension for Conv1d (batch_size, 1, seq_length)
         x = x.unsqueeze(1)  # (batch_size, 1, seq_length)
-        x = self.cnn(x)     # (batch_size, cnn_out_channels, seq_length // 2)
-        x = x.transpose(1, 2)  # (batch_size, seq_length // 2, cnn_out_channels)
-        lstm_out, _ = self.lstm(x)  # LSTM output
-        output = self.fc(lstm_out[:, -1, :])  # Use the last LSTM output
+        
+        # CNN part
+        cnn_out = self.cnn(x)  # Output shape: (batch_size, cnn_out_channels, seq_length)
+        
+        # Transpose to (batch_size, seq_length, cnn_out_channels)
+        cnn_out = cnn_out.transpose(1, 2)
+        
+        # Apply attention mechanism (context_vector shape: (batch_size, cnn_out_channels))
+        context_vector, _ = self.attention(cnn_out)
+
+        # Flatten context vector for fully connected layer input
+        context_vector = context_vector.view(context_vector.size(0), -1)  # Flatten to (batch_size, cnn_out_channels)
+
+        # Fully connected layers
+        output = self.fc(context_vector)  # Output shape: (batch_size, output_dim)
+        return output
+
+
+# 调试函数：打印张量形状
+def debug_shape(tensor, name):
+    if tensor is not None:
+        print(f"{name} shape: {tensor.shape}")
+    else:
+        print(f"{name} is None")
+
+
+# LAttention 类
+class LAttention(nn.Module):
+    def __init__(self, hidden_dim):
+        super(LAttention, self).__init__()
+        self.attention_weights = nn.Linear(hidden_dim * 2, 1)  # For BiLSTM hidden_dim * 2
+
+    def forward(self, lstm_out):        
+        attention_scores = self.attention_weights(lstm_out)  # (batch_size, seq_len, 1)
+        
+        if attention_scores.dim() == 3:  # 确保维度正确
+            attention_scores = attention_scores.squeeze(-1)  # (batch_size, seq_len)
+                
+        attention_weights = torch.softmax(attention_scores, dim=1)  # (batch_size, seq_len)        
+        context_vector = torch.sum(lstm_out * attention_weights.unsqueeze(-1), dim=1)  # (batch_size, hidden_dim * 2)
+        
+        return context_vector, attention_weights
+
+
+# BiLSTM_Attention_Model 类
+class BiLSTM_Attention_Model(nn.Module):
+    def __init__(self, input_dim, lstm_hidden_dim, lstm_layers, output_dim, dropout=0.3):
+        super(BiLSTM_Attention_Model, self).__init__()
+        self.lstm = nn.LSTM(
+            input_size=input_dim,
+            hidden_size=lstm_hidden_dim,
+            num_layers=lstm_layers,
+            batch_first=True,
+            bidirectional=True
+        )
+        self.layer_norm = nn.LayerNorm(lstm_hidden_dim * 2)
+        self.attention = LAttention(lstm_hidden_dim)
+        self.fc = nn.Sequential(
+            nn.Linear(lstm_hidden_dim * 2, 128),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(128, output_dim)
+        )
+
+    def forward(self, x):
+        lstm_out, _ = self.lstm(x)  # (batch_size, seq_len, hidden_dim * 2)
+        
+        lstm_out = self.layer_norm(lstm_out)  # (batch_size, seq_len, hidden_dim * 2)
+        
+        context_vector, attention_weights = self.attention(lstm_out)  # (batch_size, hidden_dim * 2)
+
+        output = self.fc(context_vector)  # (batch_size, output_dim)
+        
+        return output
+
+
+# GAttention 类
+class GAttention(nn.Module):
+    def __init__(self, hidden_dim):
+        super(GAttention, self).__init__()
+        self.attention_weights = nn.Linear(hidden_dim * 2, 1)
+
+    def forward(self, gru_out):
+        attention_scores = self.attention_weights(gru_out)  # (batch_size, seq_len, 1)
+        
+        if attention_scores.dim() == 3:  # 确保维度正确
+            attention_scores = attention_scores.squeeze(-1)  # (batch_size, seq_len)
+                
+        attention_weights = torch.softmax(attention_scores, dim=1)  # (batch_size, seq_len)        
+        context_vector = torch.sum(gru_out * attention_weights.unsqueeze(-1), dim=1)  # (batch_size, hidden_dim * 2)        
+        return context_vector, attention_weights
+
+
+# BiGRU_Attention_Model 类
+class BiGRU_Attention_Model(nn.Module):
+    def __init__(self, input_dim, gru_hidden_dim, gru_layers, output_dim, dropout=0.3, gru_dropout=0.3):
+        super(BiGRU_Attention_Model, self).__init__()
+        self.gru = nn.GRU(
+            input_size=input_dim,
+            hidden_size=gru_hidden_dim,
+            num_layers=gru_layers,
+            batch_first=True,
+            bidirectional=True,
+            dropout=gru_dropout
+        )
+        self.layer_norm = nn.LayerNorm(gru_hidden_dim * 2)
+        self.attention = GAttention(gru_hidden_dim)
+        self.fc = nn.Sequential(
+            nn.Linear(gru_hidden_dim * 2, 128),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.BatchNorm1d(128),
+            nn.Linear(128, output_dim)
+        )
+
+    def forward(self, x):
+        gru_out, _ = self.gru(x)  # (batch_size, seq_len, hidden_dim * 2)
+        gru_out = self.layer_norm(gru_out)  # (batch_size, seq_len, hidden_dim * 2)
+        context_vector, attention_weights = self.attention(gru_out)  # (batch_size, hidden_dim * 2)
+        output = self.fc(context_vector)  # (batch_size, output_dim)
+        
+        return output
+
+
+    
+class CNN_BiLSTM_Attention_Model(nn.Module):
+    def __init__(self, input_dim, cnn_out_channels, lstm_hidden_dim, lstm_layers, output_dim):
+        super(CNN_BiLSTM_Attention_Model, self).__init__()
+        
+        # CNN with residual connection
+        self.cnn = nn.Sequential(
+            nn.Conv1d(1, cnn_out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm1d(cnn_out_channels),
+            nn.ReLU(),
+            nn.Conv1d(cnn_out_channels, cnn_out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm1d(cnn_out_channels),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=2),
+            nn.Dropout(0.3)
+        )
+        
+        # BiLSTM with LayerNorm
+        self.lstm = nn.LSTM(
+            input_size=cnn_out_channels,
+            hidden_size=lstm_hidden_dim,
+            num_layers=lstm_layers,
+            batch_first=True,
+            bidirectional=True
+        )
+        self.layer_norm = nn.LayerNorm(lstm_hidden_dim * 2)
+
+        # Attention
+        self.attention = Attention(lstm_hidden_dim)
+        
+        # Fully connected layers
+        self.fc = nn.Sequential(
+            nn.Linear(lstm_hidden_dim * 2, 128),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(128, output_dim)
+        )
+    
+    def forward(self, x):
+        x = x.unsqueeze(1)  # Add channel dimension
+        cnn_out = self.cnn(x)
+        cnn_out = cnn_out.transpose(1, 2)  # (batch_size, seq_length, features)
+        
+        lstm_out, _ = self.lstm(cnn_out)
+        lstm_out = self.layer_norm(lstm_out)
+
+        context_vector, _ = self.attention(lstm_out)  # Apply attention
+        output = self.fc(context_vector)
+        return output
+
+
+class CNN_BiGRU_Attention_Model(nn.Module):
+    def __init__(self, input_dim, cnn_out_channels, gru_hidden_dim, gru_layers, output_dim, dropout=0.3, gru_dropout=0.3):
+        super(CNN_BiGRU_Attention_Model, self).__init__()
+        
+        # CNN Layer with residual connection
+        self.cnn = nn.Sequential(
+            nn.Conv1d(in_channels=1, out_channels=cnn_out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm1d(cnn_out_channels),
+            nn.ReLU(),
+            nn.Conv1d(cnn_out_channels, cnn_out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm1d(cnn_out_channels),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=2),  # Add max pooling to reduce sequence length
+            nn.Dropout(dropout)
+        )
+        
+        # BiGRU Layer with LayerNorm
+        self.gru = nn.GRU(
+            input_size=cnn_out_channels,  # CNN output size
+            hidden_size=gru_hidden_dim,  # GRU hidden size
+            num_layers=gru_layers,
+            batch_first=True,
+            bidirectional=True,
+            dropout=gru_dropout  # Dropout for GRU layers
+        )
+        self.layer_norm = nn.LayerNorm(gru_hidden_dim * 2)  # Apply LayerNorm after GRU
+        
+        # Attention Layer
+        self.attention = Attention(gru_hidden_dim)
+        
+        # Fully Connected Layer with BatchNorm
+        self.fc = nn.Sequential(
+            nn.Linear(gru_hidden_dim * 2, 128),  # BiGRU output size is 2 * gru_hidden_dim
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.BatchNorm1d(128),  # BatchNorm after the first linear layer
+            nn.Linear(128, output_dim)
+        )
+
+        # Initialize layers (help with convergence)
+        self._initialize_weights()
+
+    def _initialize_weights(self):
+        # Initialize weights for CNN and GRU layers
+        for name, param in self.named_parameters():
+            if 'weight' in name:
+                if isinstance(self._modules[name.split('.')[0]], nn.Conv1d):
+                    nn.init.kaiming_normal_(param, nonlinearity='relu')
+                elif isinstance(self._modules[name.split('.')[0]], nn.GRU):
+                    nn.init.xavier_normal_(param)
+            elif 'bias' in name:
+                nn.init.zeros_(param)
+
+    def forward(self, x):
+        # Add an extra channel dimension for CNN input (batch_size, 1, seq_length)
+        x = x.unsqueeze(1)  # (batch_size, 1, seq_length)
+        
+        # CNN feature extraction
+        x = self.cnn(x)  # Apply CNN layers
+        x = x.transpose(1, 2)  # Convert to shape (batch_size, seq_len, cnn_out_channels) for GRU input
+
+        # BiGRU for sequence processing
+        gru_out, _ = self.gru(x)  # (batch_size, seq_len, 2 * gru_hidden_dim)
+        gru_out = self.layer_norm(gru_out)  # Apply LayerNorm
+
+        # Attention Mechanism
+        context_vector, attention_weights = self.attention(gru_out)  # (batch_size, 2 * gru_hidden_dim)
+
+        # Final classification (fully connected layer)
+        output = self.fc(context_vector)  # (batch_size, output_dim)
+        
         return output
