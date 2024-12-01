@@ -7,7 +7,7 @@ from torch.optim import Adam
 import csv
 import matplotlib.pyplot as plt
 
-from model import BiGRU_Attention_Model, BiGRU_Model, BiLSTM_Attention_Model, BiLSTM_Model, CNN_Attention_Model, CNN_BiGRU_Attention_Model, CNN_BiGRU_Model, CNN_BiLSTM_Model, CNN_BiLSTM_Attention_Model, CNN_Model
+from model import BiGRU_Attention_Model, BiGRU_Model, BiLSTM_Attention_Model, BiLSTM_Model, CNN_Attention_Model, CNN_BiGRU_Attention_Model, CNN_BiGRU_Model, CNN_BiLSTM_Model, CNN_BiLSTM_Attention_Model, CNN_Model, GRU_Model, LSTM_Model
 from train import calculate_metrics, train_model
 from explain import explain_with_shap
 from data_preprocessing import get_dataloaders
@@ -151,6 +151,22 @@ def initialize_model(model_type, input_dim, output_dim, device, cnn_out_channels
             input_dim=input_dim,
             hidden_dim=hidden_dim,
             output_dim=output_dim
+        ).to(device)
+
+    elif model_type == 'LSTM':
+        return LSTM_Model(
+            input_dim=input_dim,  # Correct parameter name
+            lstm_hidden_dim=hidden_dim,
+            lstm_layers=1,  # You can adjust the number of layers
+            output_dim=output_dim
+        ).to(device)
+
+    elif model_type == 'GRU':
+        return GRU_Model(
+            input_dim=input_dim,        # Correct parameter name for input dimension
+            gru_hidden_dim=hidden_dim,  # GRU hidden dimension
+            gru_layers=1,               # Number of GRU layers (adjust as needed)
+            output_dim=output_dim       # Number of output units (e.g., for classification)
         ).to(device)
 
     elif model_type == 'CNN':

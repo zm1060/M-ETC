@@ -19,7 +19,7 @@ def main():
     
     # Model configuration parameters
     parser.add_argument('--model_type', type=str, default='CNN_BiLSTM_Attention', 
-                        choices=['CNN_BiLSTM_Attention', 'CNN_BiGRU_Attention', 'CNN_Attention', 'BiGRU_Attention', 'BiLSTM_Attention','CNN_BiGRU', 'CNN_BiLSTM', 'BiLSTM', 'BiGRU', 'CNN', 'RandomForest', 'XGBoost'],
+                        choices=['CNN_BiLSTM_Attention', 'CNN_BiGRU_Attention', 'CNN_Attention', 'BiGRU_Attention', 'BiLSTM_Attention','CNN_BiGRU', 'CNN_BiLSTM', 'BiLSTM', 'BiGRU', 'LSTM', 'GRU', 'CNN', 'RandomForest', 'XGBoost'],
                         help='Type of model architecture to use (e.g., CNN_BiLSTM_Attention, BiGRU, etc.).')
     parser.add_argument('--cnn_out_channels', type=int, default=64, help='Number of output channels for CNN layers.')
     parser.add_argument('--hidden_dim', type=int, default=64, help='Hidden size for LSTM/GRU layers.')

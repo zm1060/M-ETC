@@ -45,6 +45,66 @@ class CNN_Model(nn.Module):
         output = self.fc(x)
         return output
 
+class LSTM_Model(nn.Module):
+    def __init__(self, input_dim, lstm_hidden_dim, lstm_layers, output_dim):
+        super(LSTM_Model, self).__init__()
+        
+        self.lstm = nn.LSTM(
+            input_size=input_dim,  # This is correct, as input_size is for LSTM layer
+            hidden_size=lstm_hidden_dim,
+            num_layers=lstm_layers,
+            batch_first=True,
+            bidirectional=False  # Single-direction LSTM
+        )
+
+        self.fc = nn.Sequential(
+            nn.Linear(lstm_hidden_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, output_dim)
+        )
+    
+    def forward(self, x):
+        lstm_out, _ = self.lstm(x)
+        if lstm_out.dim() == 2:
+            last_hidden_state = lstm_out  # If 2D output, take it directly
+        else:
+            last_hidden_state = lstm_out[:, -1, :]  # Else take the last hidden state
+        output = self.fc(last_hidden_state)
+        return output
+
+class GRU_Model(nn.Module):
+    def __init__(self, input_dim, gru_hidden_dim, gru_layers, output_dim):
+        super(GRU_Model, self).__init__()
+        
+        # Define GRU layer
+        self.gru = nn.GRU(
+            input_size=input_dim,  # Input dimension for GRU
+            hidden_size=gru_hidden_dim,  # Hidden state dimension
+            num_layers=gru_layers,  # Number of GRU layers
+            batch_first=True,  # Input tensor shape: (batch_size, seq_len, input_dim)
+            bidirectional=False  # Set to True if you want a bidirectional GRU
+        )
+
+        # Fully connected layers
+        self.fc = nn.Sequential(
+            nn.Linear(gru_hidden_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, output_dim)
+        )
+    
+    def forward(self, x):
+        # Forward pass through GRU
+        gru_out, _ = self.gru(x)
+        
+        # If the output is 2D, just use it directly as the last hidden state
+        if gru_out.dim() == 2:
+            last_hidden_state = gru_out  # (batch_size, hidden_dim)
+        else:
+            last_hidden_state = gru_out[:, -1, :]  # (batch_size, hidden_dim) for sequence-based output
+        
+        # Pass the last hidden state through fully connected layers
+        output = self.fc(last_hidden_state)
+        return output
 
 class BiLSTM_Model(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim, dropout1=0.2, dropout2=0):
@@ -260,114 +320,157 @@ class CNN_Attention_Model(nn.Module):
         output = self.fc(context_vector)  # Output shape: (batch_size, output_dim)
         return output
 
-
-# 调试函数：打印张量形状
-def debug_shape(tensor, name):
-    if tensor is not None:
-        print(f"{name} shape: {tensor.shape}")
-    else:
-        print(f"{name} is None")
-
-
-# LAttention 类
+# LAttention: LSTM的注意力机制
 class LAttention(nn.Module):
     def __init__(self, hidden_dim):
         super(LAttention, self).__init__()
-        self.attention_weights = nn.Linear(hidden_dim * 2, 1)  # For BiLSTM hidden_dim * 2
+        # 使用一个线性层来计算注意力分数
+        self.attention_weights = nn.Linear(hidden_dim * 2, 1)
 
-    def forward(self, lstm_out):        
-        attention_scores = self.attention_weights(lstm_out)  # (batch_size, seq_len, 1)
+    def forward(self, lstm_out):
+        # 计算每个时间步的注意力分数 (batch_size, seq_len, 1)
+        attention_scores = self.attention_weights(lstm_out)
         
-        if attention_scores.dim() == 3:  # 确保维度正确
+        # 如果注意力分数是三维张量（即 (batch_size, seq_len, 1)），就去掉最后一维
+        if attention_scores.dim() == 3:
             attention_scores = attention_scores.squeeze(-1)  # (batch_size, seq_len)
-                
-        attention_weights = torch.softmax(attention_scores, dim=1)  # (batch_size, seq_len)        
-        context_vector = torch.sum(lstm_out * attention_weights.unsqueeze(-1), dim=1)  # (batch_size, hidden_dim * 2)
+        
+        # 使用缩放技巧以增强数值稳定性
+        attention_scores = attention_scores / (lstm_out.size(-1) ** 0.5)  # 缩放
+
+        # 使用 softmax 得到注意力权重 (batch_size, seq_len)
+        attention_weights = torch.softmax(attention_scores, dim=1)
+        
+        # 使用加权求和得到上下文向量 (batch_size, hidden_dim * 2)
+        context_vector = torch.sum(lstm_out * attention_weights.unsqueeze(-1), dim=1)
         
         return context_vector, attention_weights
 
-
-# BiLSTM_Attention_Model 类
+# BiLSTM_Attention_Model: BiLSTM模型 + Attention
 class BiLSTM_Attention_Model(nn.Module):
     def __init__(self, input_dim, lstm_hidden_dim, lstm_layers, output_dim, dropout=0.3):
         super(BiLSTM_Attention_Model, self).__init__()
+        # BiLSTM 层
         self.lstm = nn.LSTM(
-            input_size=input_dim,
-            hidden_size=lstm_hidden_dim,
-            num_layers=lstm_layers,
-            batch_first=True,
-            bidirectional=True
+            input_size=input_dim,        # 输入特征的维度
+            hidden_size=lstm_hidden_dim, # 隐藏层的维度
+            num_layers=lstm_layers,      # LSTM 层数
+            batch_first=True,            # 输入输出格式为 (batch_size, seq_len, input_size)
+            bidirectional=True           # 双向 LSTM
         )
+        
+        # LayerNorm 层进行标准化
         self.layer_norm = nn.LayerNorm(lstm_hidden_dim * 2)
+        
+        # Dropout 层防止过拟合
+        self.dropout = nn.Dropout(dropout)
+        
+        # 注意力机制层
         self.attention = LAttention(lstm_hidden_dim)
+        
+        # 输出层
         self.fc = nn.Sequential(
-            nn.Linear(lstm_hidden_dim * 2, 128),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(128, output_dim)
+            nn.Linear(lstm_hidden_dim * 2, 128),  # 将 BiLSTM 的输出连接到一个线性层
+            nn.ReLU(),                            # 激活函数
+            nn.Dropout(dropout),                  # Dropout 防止过拟合
+            nn.Linear(128, output_dim)            # 最终的输出层，输出类别数
         )
 
     def forward(self, x):
-        lstm_out, _ = self.lstm(x)  # (batch_size, seq_len, hidden_dim * 2)
+        # 获取 BiLSTM 的输出 (batch_size, seq_len, hidden_dim * 2)
+        lstm_out, _ = self.lstm(x)
         
-        lstm_out = self.layer_norm(lstm_out)  # (batch_size, seq_len, hidden_dim * 2)
+        # LayerNorm 进行归一化
+        lstm_out = self.layer_norm(lstm_out)
         
-        context_vector, attention_weights = self.attention(lstm_out)  # (batch_size, hidden_dim * 2)
-
-        output = self.fc(context_vector)  # (batch_size, output_dim)
+        # Dropout
+        lstm_out = self.dropout(lstm_out)
+        
+        # 获取上下文向量和注意力权重
+        context_vector, attention_weights = self.attention(lstm_out)
+        
+        # 通过全连接层输出最终结果
+        output = self.fc(context_vector)
         
         return output
 
 
-# GAttention 类
+# GAttention: GRU的注意力机制
 class GAttention(nn.Module):
     def __init__(self, hidden_dim):
         super(GAttention, self).__init__()
+        # 使用一个线性层来计算注意力分数
         self.attention_weights = nn.Linear(hidden_dim * 2, 1)
 
     def forward(self, gru_out):
-        attention_scores = self.attention_weights(gru_out)  # (batch_size, seq_len, 1)
+        # 计算每个时间步的注意力分数 (batch_size, seq_len, 1)
+        attention_scores = self.attention_weights(gru_out)
         
-        if attention_scores.dim() == 3:  # 确保维度正确
+        # 如果注意力分数是三维张量（即 (batch_size, seq_len, 1)），就去掉最后一维
+        if attention_scores.dim() == 3:
             attention_scores = attention_scores.squeeze(-1)  # (batch_size, seq_len)
-                
-        attention_weights = torch.softmax(attention_scores, dim=1)  # (batch_size, seq_len)        
-        context_vector = torch.sum(gru_out * attention_weights.unsqueeze(-1), dim=1)  # (batch_size, hidden_dim * 2)        
+        
+        # 使用缩放技巧以增强数值稳定性
+        attention_scores = attention_scores / (gru_out.size(-1) ** 0.5)  # 缩放
+
+        # 使用 softmax 得到注意力权重 (batch_size, seq_len)
+        attention_weights = torch.softmax(attention_scores, dim=1)
+        
+        # 使用加权求和得到上下文向量 (batch_size, hidden_dim * 2)
+        context_vector = torch.sum(gru_out * attention_weights.unsqueeze(-1), dim=1)
+        
         return context_vector, attention_weights
 
 
-# BiGRU_Attention_Model 类
+# BiGRU_Attention_Model: BiGRU模型 + Attention
 class BiGRU_Attention_Model(nn.Module):
     def __init__(self, input_dim, gru_hidden_dim, gru_layers, output_dim, dropout=0.3, gru_dropout=0.3):
         super(BiGRU_Attention_Model, self).__init__()
+        # BiGRU 层
         self.gru = nn.GRU(
-            input_size=input_dim,
-            hidden_size=gru_hidden_dim,
-            num_layers=gru_layers,
-            batch_first=True,
-            bidirectional=True,
-            dropout=gru_dropout
+            input_size=input_dim,         # 输入特征的维度
+            hidden_size=gru_hidden_dim,   # 隐藏层的维度
+            num_layers=gru_layers,        # GRU 层数
+            batch_first=True,             # 输入输出格式为 (batch_size, seq_len, input_size)
+            bidirectional=True,           # 双向 GRU
+            dropout=gru_dropout           # Dropout 防止过拟合
         )
+        
+        # LayerNorm 层进行标准化
         self.layer_norm = nn.LayerNorm(gru_hidden_dim * 2)
+        
+        # Dropout 层
+        self.dropout = nn.Dropout(dropout)
+        
+        # 注意力机制层
         self.attention = GAttention(gru_hidden_dim)
+        
+        # 输出层
         self.fc = nn.Sequential(
-            nn.Linear(gru_hidden_dim * 2, 128),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.BatchNorm1d(128),
-            nn.Linear(128, output_dim)
+            nn.Linear(gru_hidden_dim * 2, 128),  # 将 BiGRU 的输出连接到一个线性层
+            nn.ReLU(),                            # 激活函数
+            nn.Dropout(dropout),                  # Dropout 防止过拟合
+            nn.BatchNorm1d(128),                  # BatchNorm 增强稳定性
+            nn.Linear(128, output_dim)            # 最终的输出层，输出类别数
         )
 
     def forward(self, x):
-        gru_out, _ = self.gru(x)  # (batch_size, seq_len, hidden_dim * 2)
-        gru_out = self.layer_norm(gru_out)  # (batch_size, seq_len, hidden_dim * 2)
-        context_vector, attention_weights = self.attention(gru_out)  # (batch_size, hidden_dim * 2)
-        output = self.fc(context_vector)  # (batch_size, output_dim)
+        # 获取 BiGRU 的输出 (batch_size, seq_len, hidden_dim * 2)
+        gru_out, _ = self.gru(x)
         
+        # LayerNorm 进行归一化
+        gru_out = self.layer_norm(gru_out)
+        
+        # Dropout
+        gru_out = self.dropout(gru_out)
+        
+        # 获取上下文向量和注意力权重
+        context_vector, attention_weights = self.attention(gru_out)
+        
+        # 通过全连接层输出最终结果
+        output = self.fc(context_vector)
         return output
 
-
-    
 class CNN_BiLSTM_Attention_Model(nn.Module):
     def __init__(self, input_dim, cnn_out_channels, lstm_hidden_dim, lstm_layers, output_dim):
         super(CNN_BiLSTM_Attention_Model, self).__init__()
