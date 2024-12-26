@@ -45,6 +45,76 @@ class CNN_Model(nn.Module):
         output = self.fc(x)
         return output
 
+# RNN Model
+class RNN_Model(nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim, num_layers=1):
+        super(RNN_Model, self).__init__()
+        self.rnn = nn.RNN(input_size=input_dim, hidden_size=hidden_dim, num_layers=num_layers, batch_first=True)
+        self.fc = nn.Sequential(
+            nn.Linear(hidden_dim, 128),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(128, output_dim)
+        )
+
+    def forward(self, x):
+        out, _ = self.rnn(x)  # (batch_size, seq_len, hidden_dim)
+        if out.dim() == 3:  # Ensure sequence dimension exists
+            out = out[:, -1, :]  # Select last time step
+        output = self.fc(out)
+        return output
+
+class Transformer_Model(nn.Module):
+    def __init__(self, input_dim, d_model, nhead, num_layers, output_dim):
+        super(Transformer_Model, self).__init__()
+
+        # Input Embedding Layer
+        self.embedding = nn.Linear(input_dim, d_model)
+
+        # Transformer Encoder Layer with batch_first=True
+        self.transformer_encoder = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, batch_first=True),
+            num_layers=num_layers
+        )
+
+        # Fully connected layer
+        self.fc = nn.Sequential(
+            nn.Linear(d_model, 128),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(128, output_dim)
+        )
+
+    def forward(self, x):
+        x = self.embedding(x)  # Linear embedding
+        # Ensure input is 3D: (batch_size, seq_len, input_dim)
+        if x.dim() == 2:
+            x = x.unsqueeze(1)  # Add a sequence length dimension if missing
+        x = self.transformer_encoder(x)  # Batch-first enabled, no permute needed
+        x = x.mean(dim=1)  # Mean pooling over the sequence length
+        output = self.fc(x)
+        return output
+
+# MLP Model
+class MLP_Model(nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim):
+        super(MLP_Model, self).__init__()
+
+        # Fully connected layers
+        self.fc = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(hidden_dim, output_dim)
+        )
+
+    def forward(self, x):
+        output = self.fc(x)
+        return output
+
 class LSTM_Model(nn.Module):
     def __init__(self, input_dim, lstm_hidden_dim, lstm_layers, output_dim):
         super(LSTM_Model, self).__init__()
@@ -252,16 +322,24 @@ class CNN_BiLSTM_Model(nn.Module):
         )
     
     def forward(self, x):
-        x = x.unsqueeze(1)  # Add channel dimension
-        cnn_out = self.cnn(x)
-        cnn_out = cnn_out.transpose(1, 2)  # (batch_size, seq_length, features)
+        x = x.unsqueeze(1)  # Add channel dimension (batch_size, 1, seq_len)
+        cnn_out = self.cnn(x)  # CNN output: (batch_size, cnn_out_channels, seq_len // 2)
+        cnn_out = cnn_out.transpose(1, 2)  # Transpose to (batch_size, seq_len // 2, cnn_out_channels)
         
-        lstm_out, _ = self.lstm(cnn_out)
+        # Ensure LSTM weights are contiguous in memory
+        self.lstm.flatten_parameters()
+        
+        # BiLSTM forward
+        lstm_out, _ = self.lstm(cnn_out)  # LSTM output: (batch_size, seq_len // 2, lstm_hidden_dim * 2)
         lstm_out = self.layer_norm(lstm_out)
 
-        output = self.fc(lstm_out[:, -1, :])  # Use the last time step
+        # Pooling over all time steps (optional: use mean pooling or max pooling)
+        pooled_out = torch.mean(lstm_out, dim=1)  # Mean pooling
+        
+        # Fully connected layers
+        output = self.fc(pooled_out)
         return output
-
+    
 class CAttention(nn.Module):
     def __init__(self, hidden_size):
         super(CAttention, self).__init__()

@@ -61,7 +61,29 @@ def preprocess_data(data, label_column='Label'):
     return X, y, scaler, label_encoder
 
 def get_dataloaders(X, y, test_size=0.2, batch_size=64, sample_size=None):
-    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=test_size, random_state=42, stratify=y)
+    """
+    Splits the dataset into training and validation sets, optionally samples the training set,
+    and creates PyTorch DataLoaders for both sets.
+
+    Parameters:
+    - X (numpy.ndarray or similar): Feature data.
+    - y (numpy.ndarray or similar): Label data corresponding to X.
+    - test_size (float, optional): Proportion of the dataset to include in the validation split.
+                                    Default is 0.2 (20%).
+    - batch_size (int, optional): Number of samples per batch to load. Default is 64.
+    - sample_size (float or int, optional): If specified, limits the training set to a subset.
+                                            If float, represents the proportion of the training set.
+                                            If int, represents the absolute number of samples.
+                                            Default is None (no sampling).
+
+    Returns:
+    - train_loader (DataLoader): DataLoader for the training set.
+    - val_loader (DataLoader): DataLoader for the validation set.
+    """
+
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y, test_size=test_size, random_state=42, stratify=y
+    )
 
     if sample_size:
         if isinstance(sample_size, float) and 0 < sample_size < 1:
@@ -69,18 +91,101 @@ def get_dataloaders(X, y, test_size=0.2, batch_size=64, sample_size=None):
         elif isinstance(sample_size, int) and sample_size < len(X_train):
             sample_size = sample_size
         else:
-            raise ValueError("sample_size must be a proportion (0 < sample_size < 1) or an integer less than the training set size")
+            raise ValueError(
+                "sample_size must be a proportion (0 < sample_size < 1) "
+                "or an integer less than the training set size"
+            )
 
         indices = np.random.choice(len(X_train), sample_size, replace=False)
         X_train, y_train = X_train[indices], y_train[indices]
-
-    train_dataset = TensorDataset(torch.tensor(X_train, dtype=torch.float32), torch.tensor(y_train, dtype=torch.long))
-    val_dataset = TensorDataset(torch.tensor(X_val, dtype=torch.float32), torch.tensor(y_val, dtype=torch.long))
-
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size)
+    train_dataset = TensorDataset(
+        torch.tensor(X_train, dtype=torch.float32),
+        torch.tensor(y_train, dtype=torch.long)
+    )
+    val_dataset = TensorDataset(
+        torch.tensor(X_val, dtype=torch.float32),
+        torch.tensor(y_val, dtype=torch.long)
+    )
+    train_loader = DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=True
+    )
+    val_loader = DataLoader(
+        val_dataset, batch_size=batch_size
+    )
     
     return train_loader, val_loader
+
+def get_fine_tune_loader(X_fine_train, y_fine_train, X_fine_val, y_fine_val, sample_size, batch_size=64):
+    """
+    Creates DataLoaders for the fine-tuning phase by sampling the training data and manually handling the validation data.
+
+    Parameters:
+    - X_fine_train (numpy.ndarray): Training feature data.
+    - y_fine_train (numpy.ndarray): Training label data.
+    - X_fine_val (numpy.ndarray): Validation feature data.
+    - y_fine_val (numpy.ndarray): Validation label data.
+    - sample_size (float or int): Sampling size.
+    - batch_size (int): Number of samples per batch for both DataLoaders.
+
+    Returns:
+    - fine_tune_train_loader (DataLoader): DataLoader for the training set.
+    - fine_tune_val_loader (DataLoader): DataLoader for the validation set.
+    """
+    # Sampling the training data
+    X_fine_train, y_fine_train = sample_data(X_fine_train, y_fine_train, sample_size)
+
+    # Create the training dataset and DataLoader
+    train_dataset = TensorDataset(
+        torch.tensor(X_fine_train, dtype=torch.float32),
+        torch.tensor(y_fine_train, dtype=torch.long)
+    )
+    fine_tune_train_loader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True  # Shuffle for better training
+    )
+
+    # Create the validation dataset and DataLoader
+    val_dataset = TensorDataset(
+        torch.tensor(X_fine_val, dtype=torch.float32),
+        torch.tensor(y_fine_val, dtype=torch.long)
+    )
+    fine_tune_val_loader = DataLoader(
+        val_dataset,
+        batch_size=batch_size,
+        shuffle=False  # No shuffle for validation
+    )
+
+    return fine_tune_train_loader, fine_tune_val_loader
+
+def sample_data(X, y, sample_size):
+    """
+    Samples the training data based on the specified sample size.
+
+    Parameters:
+    - X (numpy.ndarray): Feature data.
+    - y (numpy.ndarray): Label data.
+    - sample_size (float or int): 
+        - If float (0 < sample_size < 1), represents the proportion of the data to sample.
+        - If int, represents the absolute number of samples to retain.
+
+    Returns:
+    - X_sampled (numpy.ndarray): Sampled feature data.
+    - y_sampled (numpy.ndarray): Sampled label data.
+    """
+    if sample_size:
+        if isinstance(sample_size, float) and 0 < sample_size < 1:
+            sample_size_calculated = int(len(X) * sample_size)
+        elif isinstance(sample_size, int) and sample_size < len(X):
+            sample_size_calculated = sample_size
+        else:
+            raise ValueError("sample_size must be a float between 0 and 1 or an integer less than the size of the dataset.")
+        
+        sampled_indices = np.random.choice(len(X), sample_size_calculated, replace=False)
+        X_sampled = X[sampled_indices]
+        y_sampled = y[sampled_indices]
+        return X_sampled, y_sampled
+    return X, y
 
 def get_test_loader(X, y, batch_size=64):
     test_dataset = TensorDataset(torch.tensor(X, dtype=torch.float32), torch.tensor(y, dtype=torch.long))

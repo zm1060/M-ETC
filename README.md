@@ -52,6 +52,23 @@ pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https
 ---
 
 ## Usage
+### Dataset
+CIRA-CIC-DoHBrw-2020
+doh_dataset
+Custom_dataset
+FiveWeek
+Generated
+RealWorld
+Tunnel
+
+
+
+NOT RUNNING:
+'CNN_Attention', 'BiGRU_Attention', 'BiLSTM_Attention'
+
+nohup python main.py --model_type CNN_BiGRU_Attention --train --epochs 100 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
+
+
 
 ### Training
 Train a model using the specified architecture and dataset.
@@ -64,16 +81,41 @@ python main.py --model_type XGBoost --train --epochs 100 --batch_size 64 --data_
 python main.py --model_type XGBoost --train --epochs 100 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020
 ```
 ```shell
-python main.py --model_type BiLSTM --train --epochs 100 --batch_size 64 --data_dir ./csv_output/doh_dataset
+python main.py --model_type RandomForest --train --epochs 100 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020
 ```
 ```shell
-python main.py --model_type CNN_BiLSTM_Attention --train --epochs 100 --batch_size 64 --data_dir ./csv_output/doh_dataset
+python main.py --model_type CNN --train --epochs 100 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020
+```
+
+```shell
+python main.py --model_type LSTM --train --epochs 100 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020
+```
+
+```shell
+python main.py --model_type GRU --train --epochs 100 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020
+```
+
+```shell
+python main.py --model_type BiLSTM --train --epochs 100 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020
+```
+
+```shell
+python main.py --model_type BiGRU --train --epochs 100 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020
 ```
 ```shell
-python main.py --model_type XGBoost --train --epochs 100 --batch_size 64 --data_dir ./csv_output/doh_dataset
+python main.py --model_type CNN_BiLSTM_Attention --train --epochs 100 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020
 ```
 ```shell
-python main.py --model_type RandomForest --train --epochs 100 --batch_size 64 --data_dir ./csv_output/doh_dataset
+python main.py --model_type CNN_BiGRU_Attention --train --epochs 100 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020
+```
+```shell
+python main.py --model_type CNN_BiLSTM --train --epochs 100 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020
+```
+```shell
+python main.py --model_type CNN_BiGRU --train --epochs 100 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020
+```
+```shell
+python main.py --model_type CNN_Attention --train --epochs 100 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020
 ```
 ---
 
@@ -88,19 +130,22 @@ python main.py --model_type CNN_BiLSTM_Attention --fine_tune --fine_tune_data_di
 python main.py --model_type BiLSTM --fine_tune --fine_tune_data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 --fine_tune_epochs 10 --best_checkpoint_path BiLSTM_best_model_checkpoint.pth
 ````
 ```shell
-python main.py --model_type RandomForest --fine_tune --fine_tune_data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 --fine_tune_epochs 10 --best_checkpoint_path RandomForest_model.pkl
+python main.py --model_type RandomForest --fine_tune --fine_tune_data_dir ./csv_output/doh_dataset --fine_tune_epochs 10 --best_checkpoint_path RandomForest_model.pkl --sample_size 0.1
 ```
 ```shell
 python main.py --model_type XGBoost --fine_tune --fine_tune_data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 --fine_tune_epochs 10 --best_checkpoint_path XGBoost_model.pkl
 ```
 ---
-
+CNN_BiLSTM_best_model_checkpoint.pth
 ### Testing
 Evaluate the performance of a trained or fine-tuned model on a test dataset(never used before).
 
 #### Example Commands
 ```shell
-python main.py --model_type CNN_BiLSTM_Attention --test --test_data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 --test_checkpoint_path CNN_BiLSTM_Attention_fine_tuned_model.pth
+python main.py --model_type CNN_BiLSTM --test --test_data_dir ./csv_output/Custom_dataset --test_checkpoint_path CNN_BiLSTM_best_model_checkpoint.pth
+```
+```shell
+python main.py --model_type CNN_BiLSTM_Attention --test --test_data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 --test_checkpoint_path CNN_BiLSTM_Attention_fine_tuned_best_model.pth
 ```
 ```shell
 python main.py --model_type BiLSTM --test --test_data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 --test_checkpoint_path BiLSTM_fine_tuned_model.pth
@@ -111,7 +156,11 @@ python main.py --model_type XGBoost --test --test_data_dir ./csv_output/CIRA-CIC
 ```shell
 python main.py --model_type RandomForest --test --test_data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 --test_checkpoint_path RandomForest_fine_tuned_model.pkl
 ```
+```shell
+python main.py --model_type XGBoost --test --test_data_dir ./csv_output/RealWorld --test_checkpoint_path XGBoost_best_model_checkpoint.pkl
+```
 ---
+
 
 ### Explain
 Explain

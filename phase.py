@@ -7,7 +7,7 @@ import numpy as np
 from torch.optim import Adam
 from train import calculate_metrics, train_model, apply_pruning, load_model, test_model, fine_tune_model, train_baseline_model
 from explain import explain_with_shap
-from data_preprocessing import get_dataloaders, get_test_loader, load_data_from_directory, preprocess_data
+from data_preprocessing import get_dataloaders, get_fine_tune_loader, get_test_loader, load_data_from_directory, preprocess_data, sample_data
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 from utils import create_data_splits, create_fine_tune_splits, hyperparameter_search, initialize_model, log_results, set_seed
@@ -21,9 +21,9 @@ def train_phase(args, model, input_dim, output_dim, X_train, y_train, train_val_
         y_train_fold, y_val_fold = y_train[train_idx], y_train[val_idx]
         train_loader, val_loader = get_dataloaders(X_train_fold, y_train_fold, batch_size=args.batch_size, sample_size=args.sample_size)
         
-        if args.prune > 0.0 and args.model_type not in ['RandomForest', 'XGBoost']:
-            apply_pruning(model, amount=args.prune)
-        
+        if args.prune > 0.0 and args.model_type not in ['RandomForest', 'XGBoost', 'Transformer']:
+            apply_pruning(model, amount=args.prune, structured=True, global_prune=False)
+
         dl_checkpoint_path = f"{args.model_type}_fold_{fold}_checkpoint.pth"
         ml_checkpoint_path = f"{args.model_type}_fold_{fold}_checkpoint.pkl"
         
@@ -81,14 +81,15 @@ def fine_tune_phase(args, model, device):
     logging.info(f"Fine-tuning data directory: {args.fine_tune_data_dir}")
     fine_tune_data = load_data_from_directory(args.fine_tune_data_dir)
     X_fine_tune, y_fine_tune, _, _ = preprocess_data(fine_tune_data)
-    fine_tune_splits = create_fine_tune_splits(args.use_exist, X_fine_tune, y_fine_tune)
+    fine_tune_splits = create_fine_tune_splits(args.use_exist, X_fine_tune, y_fine_tune, test_size=0.8)
     fine_tune_train_indices = fine_tune_splits['fine_tune_train_indices']
     fine_tune_val_indices = fine_tune_splits['fine_tune_val_indices']
     X_fine_train, y_fine_train = X_fine_tune[fine_tune_train_indices], y_fine_tune[fine_tune_train_indices]
     X_fine_val, y_fine_val = X_fine_tune[fine_tune_val_indices], y_fine_tune[fine_tune_val_indices]
-    fine_tune_train_loader, fine_tune_val_loader = get_dataloaders(X_fine_train, y_fine_train, batch_size=args.batch_size, sample_size=args.sample_size)
-    
+
     if args.model_type in ['RandomForest', 'XGBoost']:
+        X_fine_train, y_fine_train = sample_data(X_fine_train, y_fine_train, args.sample_size)
+        logging.info(f"Sampled data for RandomForest/XGBoost: {len(X_fine_train)} samples.")
         model_file = args.best_checkpoint_path
         fine_tuned_model = joblib.load(model_file) if os.path.exists(model_file) else RandomForestClassifier(n_estimators=100, random_state=42)
         fine_tuned_model.fit(X_fine_train, y_fine_train)
@@ -97,10 +98,34 @@ def fine_tune_phase(args, model, device):
         fine_tune_metrics = calculate_metrics(y_fine_val, y_fine_pred, y_fine_pred_proba)
         joblib.dump(fine_tuned_model, f"{args.model_type}_fine_tuned_model.pkl")
     else:
+        fine_tune_train_loader, fine_tune_val_loader = get_fine_tune_loader(
+            X_fine_train, y_fine_train,
+            X_fine_val, y_fine_val,
+            sample_size=args.sample_size,
+            batch_size=args.batch_size
+        )
+        logging.info(f"Sampled data for RandomForest/XGBoost: {len(X_fine_train)} samples.")
         optimizer = Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-4)
-        fine_tune_metrics = fine_tune_model(model, fine_tune_train_loader, fine_tune_val_loader, device, optimizer=optimizer, num_epochs=args.fine_tune_epochs, pretrained_path=args.best_checkpoint_path)
+        # fine_tune_metrics = fine_tune_model(model, fine_tune_train_loader, fine_tune_val_loader, device, optimizer=optimizer, num_epochs=args.fine_tune_epochs, pretrained_path=args.best_checkpoint_path)
+        fine_tune_metrics = fine_tune_model(
+            model=model,
+            model_type="CNN_BiLSTM",
+            train_loader=fine_tune_train_loader,
+            val_loader=fine_tune_val_loader,
+            device=device,
+            num_epochs=args.fine_tune_epochs,
+            lr=1e-4,
+            optimizer_type="adam",
+            momentum=0.9,
+            weight_decay=0.01,
+            checkpoint_path=args.best_checkpoint_path,
+            resume=False,
+            save_best=True,
+            save_current=True
+        )
         torch.save(model.state_dict(), f"{args.model_type}_fine_tuned_model.pth")
-    
+    logging.info(f"{args.model_type} Fine-Tune Metrics: {fine_tune_metrics}")
+
     log_results({'model_type': args.model_type, 'phase': 'fine_tune', 'data_dir': args.fine_tune_data_dir, **fine_tune_metrics})
 
 def test_phase(args, model, device):
@@ -151,9 +176,9 @@ def explain_phase(args, model, device):
     X_correct = X_explain[correctly_classified_indices]
     
     if len(X_misclassified) > 0:
-        explain_with_shap(model, X_sample=X_misclassified, device=device, feature_names=feature_names, class_names=class_names, origin_model_type=args.model_type)
+        explain_with_shap(model, X_sample=X_misclassified, device=device, feature_names=feature_names, class_names=class_names, origin_model_type=args.model_type, db_name=args.explain_data_dir, description='misclassified')
         logging.info("SHAP explanations generated for misclassified samples.")
 
     if len(X_correct) > 0:
-        explain_with_shap(model, X_sample=X_correct, device=device, feature_names=feature_names, class_names=class_names, origin_model_type=args.model_type)
+        explain_with_shap(model, X_sample=X_correct, device=device, feature_names=feature_names, class_names=class_names, origin_model_type=args.model_type, db_name=args.explain_data_dir, description='correct')
         logging.info("SHAP explanations generated for correctly classified samples.")

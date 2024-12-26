@@ -11,23 +11,80 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 import torch.nn.utils.prune as prune
 import logging
 from sklearn.metrics import accuracy_score, log_loss, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix, cohen_kappa_score
+from tqdm import tqdm
 from xgboost import XGBClassifier
 
 
-def apply_pruning(model, amount=0.3):
-    """
-    Apply L1 unstructured pruning to Linear and LSTM layers in the model.
-    """
-    for name, module in model.named_modules():
-        if isinstance(module, nn.Linear):
-            prune.l1_unstructured(module, name='weight', amount=amount)
-            logging.info(f"Pruned {name}.weight with amount={amount}")
+# def apply_pruning(model, amount=0.3):
+#     """
+#     Apply L1 unstructured pruning to Linear and LSTM layers in the model.
+#     """
+#     for name, module in model.named_modules():
+#         if isinstance(module, nn.Linear):
+#             prune.l1_unstructured(module, name='weight', amount=amount)
+#             logging.info(f"Pruned {name}.weight with amount={amount}")
         
+#         elif isinstance(module, nn.LSTM):
+#             for layer in range(module.num_layers):
+#                 prune.l1_unstructured(module, name=f'weight_ih_l{layer}', amount=amount)
+#                 prune.l1_unstructured(module, name=f'weight_hh_l{layer}', amount=amount)
+#                 logging.info(f"Pruned LSTM layer {layer} weights.")
+
+def apply_pruning(model, amount=0.3, structured=False, global_prune=False):
+    """
+    Apply pruning to Linear and LSTM layers in the model.
+    
+    Parameters:
+    - model: nn.Module, the PyTorch model to prune.
+    - amount: float, the proportion of parameters to prune.
+    - structured: bool, whether to apply structured pruning (default: False).
+    - global_prune: bool, whether to apply global pruning across layers (default: False).
+    """
+    parameters_to_prune = []
+
+    for name, module in model.named_modules():
+        # Prune Linear layers
+        if isinstance(module, nn.Linear):
+            if structured:
+                # Structured pruning (entire neurons)
+                prune.ln_structured(module, name='weight', amount=amount, n=2, dim=0)
+            else:
+                # Unstructured pruning
+                prune.l1_unstructured(module, name='weight', amount=amount)
+            logging.info(f"Pruned {name}.weight with amount={amount}")
+            parameters_to_prune.append((module, 'weight'))
+
+        # Prune LSTM layers
         elif isinstance(module, nn.LSTM):
             for layer in range(module.num_layers):
-                prune.l1_unstructured(module, name=f'weight_ih_l{layer}', amount=amount)
-                prune.l1_unstructured(module, name=f'weight_hh_l{layer}', amount=amount)
+                if structured:
+                    # Structured pruning for LSTM
+                    prune.ln_structured(module, name=f'weight_ih_l{layer}', amount=amount, n=2, dim=0)
+                    prune.ln_structured(module, name=f'weight_hh_l{layer}', amount=amount, n=2, dim=0)
+                else:
+                    # Unstructured pruning for LSTM
+                    prune.l1_unstructured(module, name=f'weight_ih_l{layer}', amount=amount)
+                    prune.l1_unstructured(module, name=f'weight_hh_l{layer}', amount=amount)
+
                 logging.info(f"Pruned LSTM layer {layer} weights.")
+                parameters_to_prune.extend([
+                    (module, f'weight_ih_l{layer}'),
+                    (module, f'weight_hh_l{layer}')
+                ])
+    
+    if global_prune:
+        # Global pruning: prune the least important weights across all layers
+        prune.global_unstructured(
+            parameters_to_prune,
+            pruning_method=prune.L1Unstructured,
+            amount=amount
+        )
+        logging.info("Applied global pruning across all layers.")
+
+    # Remove pruning reparameterization (optional)
+    for module, param in parameters_to_prune:
+        prune.remove(module, param)
+        logging.info(f"Removed pruning reparameterization for {param}.")
 
 def save_model(model, optimizer, epoch, file_path='model_checkpoint.pth'):
     """
@@ -143,24 +200,29 @@ def train_model(model, model_type, train_loader, val_loader, device, num_epochs=
         if resume:
             model, optimizer, start_epoch = load_model(model, optimizer, checkpoint_path)
         for epoch in range(start_epoch, num_epochs):
-            start_time = time.time()
-
             model.train()
+            start_time = time.time()
             total_loss = 0
             train_preds, train_labels = [], []
             train_pred_proba = []
-            for X_batch, y_batch in train_loader:
-                X_batch, y_batch = X_batch.to(device), y_batch.to(device)
-                optimizer.zero_grad()
-                outputs = model(X_batch)
-                loss = criterion(outputs, y_batch)
-                loss.backward()
-                optimizer.step()
-                
-                total_loss += loss.item()
-                train_preds.extend(torch.argmax(outputs, dim=1).cpu().numpy())
-                train_labels.extend(y_batch.cpu().numpy())
-                train_pred_proba.extend(torch.softmax(outputs, dim=1).detach().cpu().numpy())            
+            # Create a tqdm progress bar for the training loop
+            with tqdm(total=len(train_loader), desc=f"Epoch {epoch+1}/{num_epochs} [Training]", unit="batch") as pbar:
+                for X_batch, y_batch in train_loader:
+                    X_batch, y_batch = X_batch.to(device), y_batch.to(device)
+                    optimizer.zero_grad()
+                    outputs = model(X_batch)
+                    loss = criterion(outputs, y_batch)
+                    loss.backward()
+                    optimizer.step()
+                    
+                    total_loss += loss.item()
+                    train_preds.extend(torch.argmax(outputs, dim=1).cpu().numpy())
+                    train_labels.extend(y_batch.cpu().numpy())
+                    train_pred_proba.extend(torch.softmax(outputs, dim=1).detach().cpu().numpy())
+
+                    # Update progress bar with the current loss
+                    pbar.set_postfix(loss=loss.item())
+                    pbar.update(1)
             end_time = time.time()
             train_time = end_time - start_time
             logging.info(f"Train time: {train_time:.2f} seconds")
@@ -190,6 +252,10 @@ def train_model(model, model_type, train_loader, val_loader, device, num_epochs=
                 'val': val_metrics
             }
             # logging.info(final_metrics)
+            # Apply pruning dynamically every 5 epochs
+            # if epoch % 5 == 0:
+            #     logging.info(f"Applying pruning at epoch {epoch}")
+            #     apply_pruning(model, amount=0.1, structured=True)
         return final_metrics
     except Exception as e:
         logging.error(f"Error during training: {str(e)}")
@@ -233,106 +299,118 @@ def train_baseline_model(model, model_type, X_train, y_train, X_val, y_val, chec
     logging.info(f"{metrics}")
     return metrics
 
-
 def test_model(model, test_loader, device, filtered_indices=None):
     """
     Evaluate the model on the test set.
     """
     model.eval()
     test_preds, test_labels, all_probs = [], [], []
-    with torch.no_grad():
-        for X_test_batch, y_test_batch in test_loader:
-            X_test_batch, y_test_batch = X_test_batch.to(device), y_test_batch.to(device)
-            outputs = model(X_test_batch)
-            probs = torch.nn.functional.softmax(outputs, dim=1)
-            all_probs.extend(probs.cpu().numpy())
-            test_preds.extend(torch.argmax(probs, dim=1).cpu().numpy())
-            test_labels.extend(y_test_batch.cpu().numpy())
+    
+    # Use tqdm for progress bar
+    with tqdm(total=len(test_loader), desc="Testing", unit="batch") as pbar:
+        with torch.no_grad():
+            for X_test_batch, y_test_batch in test_loader:
+                X_test_batch, y_test_batch = X_test_batch.to(device), y_test_batch.to(device)
+                outputs = model(X_test_batch)
+                probs = torch.nn.functional.softmax(outputs, dim=1)
+                all_probs.extend(probs.cpu().numpy())
+                test_preds.extend(torch.argmax(probs, dim=1).cpu().numpy())
+                test_labels.extend(y_test_batch.cpu().numpy())
+                pbar.update(1)  # Update progress bar by one batch
 
     metrics = calculate_metrics(test_labels, test_preds, all_probs)
     return metrics
 
-def fine_tune_model(model, train_loader, val_loader, device, optimizer, num_epochs=10, pretrained_path='pretrained_model.pth'):
+def fine_tune_model(model, model_type, train_loader, val_loader, device, num_epochs=10, lr=1e-4, optimizer_type='adam', momentum=0.9, weight_decay=0.01, checkpoint_path='fine_tuned_checkpoint.pth', resume=False, save_best=True, save_current=True, best_val_loss=float('inf')):
     """
-    Fine-tunes a given model with the provided training and validation loaders.
+    Fine-tunes the model on the training dataset and evaluates on the validation dataset.
     """
-    # Step 1: Load the pretrained model checkpoint
-    if pretrained_path and os.path.isfile(pretrained_path):
-        checkpoint = torch.load(pretrained_path, map_location=device)
-        logging.info(f"Loaded pretrained checkpoint from {pretrained_path}")
-        
-        try:
-            # Attempt to load the checkpoint with strict=True
-            model.load_state_dict(checkpoint['model_state_dict'])
-        except RuntimeError as e:
-            logging.error(f"RuntimeError during state_dict loading: {e}")
-            logging.info("Attempting to load with strict=False...")
-            # If strict=True fails, load with strict=False
-            model.load_state_dict(checkpoint['model_state_dict'], strict=False)
-
-        # Freeze all layers except the final fully connected layers
-        for param in model.parameters():
-            param.requires_grad = False
-        if hasattr(model, 'fc'):
-            for param in model.fc.parameters():
-                param.requires_grad = True
+    try:
+        # Select optimizer
+        if optimizer_type == 'adam':
+            optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+        elif optimizer_type == 'sgd':
+            optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
+        elif optimizer_type == 'rmsprop':
+            optimizer = torch.optim.RMSprop(model.parameters(), lr=lr, weight_decay=weight_decay)
         else:
-            logging.error("Model does not have an attribute 'fc' for fine-tuning.")
-            raise AttributeError("Ensure the model has a final layer defined as 'fc'.")
-    else:
-        logging.error(f"Pretrained model checkpoint not found at {pretrained_path}.")
-        return
+            raise ValueError(f"Unsupported optimizer type: {optimizer_type}")
 
-    # Step 2: Define the loss function
-    criterion = nn.CrossEntropyLoss()
+        # Define criterion and scheduler
+        criterion = torch.nn.CrossEntropyLoss()
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=2)
+        start_epoch = 0
+        final_metrics = {}
 
-    # Step 3: Fine-tuning process
-    for epoch in range(num_epochs):
-        model.train()
-        total_loss = 0
-        for X_batch, y_batch in train_loader:
-            X_batch, y_batch = X_batch.to(device), y_batch.to(device)
+        # Load checkpoint if resuming
+        if resume:
+            model, optimizer, start_epoch = load_model(model, optimizer, checkpoint_path)
 
-            # Forward pass
-            optimizer.zero_grad()
-            outputs = model(X_batch)
-            loss = criterion(outputs, y_batch)
+        # Fine-tuning loop
+        for epoch in range(start_epoch, num_epochs):
+            start_time = time.time()
 
-            # Backward pass and optimization
-            loss.backward()
-            optimizer.step()
-            total_loss += loss.item()
+            # Training phase
+            model.train()
+            total_loss = 0
+            train_preds, train_labels = [], []
+            train_pred_proba = []
+            # Add a tqdm progress bar for the training phase
+            with tqdm(total=len(train_loader), desc=f"Epoch {epoch+1}/{num_epochs} [Fine Tuning]", unit="batch") as pbar:
+                for X_batch, y_batch in train_loader:
+                    X_batch, y_batch = X_batch.to(device), y_batch.to(device)
 
-        avg_loss = total_loss / len(train_loader)
-        logging.info(f"Fine-tuning Epoch {epoch+1}/{num_epochs}, Loss: {avg_loss:.4f}")
+                    optimizer.zero_grad()
+                    outputs = model(X_batch)
+                    loss = criterion(outputs, y_batch)
+                    loss.backward()
+                    optimizer.step()
 
-    # Step 4: Validate the model
-    model.eval()
-    all_preds = []
-    all_labels = []
-    with torch.no_grad():
-        for X_batch, y_batch in val_loader:
-            X_batch, y_batch = X_batch.to(device), y_batch.to(device)
-            outputs = model(X_batch)
+                    total_loss += loss.item()
+                    train_preds.extend(torch.argmax(outputs, dim=1).cpu().numpy())
+                    train_labels.extend(y_batch.cpu().numpy())
+                    train_pred_proba.extend(torch.softmax(outputs, dim=1).detach().cpu().numpy())
 
-            _, predicted = torch.max(outputs, 1)
-            all_preds.extend(predicted.cpu().numpy())
-            all_labels.extend(y_batch.cpu().numpy())
+                    # Update progress bar
+                    pbar.set_postfix(loss=loss.item())
+                    pbar.update(1)
 
-    # Step 5: Compute evaluation metrics
-    preds = all_preds
-    labels = all_labels
+            train_metrics = calculate_metrics(train_labels, train_preds, train_pred_proba)
+            train_time = time.time() - start_time
+            logging.info(f"Train time: {train_time:.2f} seconds")
 
-    metrics = {
-        'accuracy': accuracy_score(labels, preds),
-        'precision': precision_score(labels, preds, average='weighted', zero_division=0),
-        'recall': recall_score(labels, preds, average='weighted', zero_division=0),
-        'f1': f1_score(labels, preds, average='weighted', zero_division=0),
-        'confusion_matrix': confusion_matrix(labels, preds)
-    }
+            # Validation phase
+            val_metrics = evaluate_model(model, val_loader, device, criterion)
+            logging.info(f"Epoch {epoch+1}/{num_epochs}, Train Metrics: {train_metrics}")
+            logging.info(f"Epoch {epoch+1}/{num_epochs}, Validation Metrics: {val_metrics}")
 
-    logging.info(f"Validation Metrics: {metrics}")
-    return metrics
+            print(f"Epoch {epoch+1}/{num_epochs}, Train Metrics: {train_metrics}")
+            print(f"Epoch {epoch+1}/{num_epochs}, Validation Metrics: {val_metrics}")
+
+            # Adjust learning rate based on validation loss
+            scheduler.step(val_metrics['loss'])
+
+            # Save current checkpoint
+            if save_current:
+                save_model(model, optimizer, epoch + 1, checkpoint_path)
+
+            # Save best checkpoint
+            if save_best and val_metrics['loss'] < best_val_loss:
+                best_val_loss = val_metrics['loss']
+                save_model(model, optimizer, epoch + 1, f'{model_type}_fine_tuned_best_model.pth')
+                logging.info(f"Best model updated at epoch {epoch+1} with val_loss {best_val_loss:.4f}")
+                print(f"Best model updated at epoch {epoch+1} with val_loss {best_val_loss:.4f}")
+
+            # Update final metrics
+            final_metrics = {
+                'train': train_metrics,
+                'val': val_metrics
+            }
+
+        return final_metrics
+    except Exception as e:
+        logging.error(f"Error during fine-tuning: {str(e)}")
+        return None
 
 
 # Helper functions

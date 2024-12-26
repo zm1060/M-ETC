@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 models_data = {}
 
 # 读取 training.log 文件
-log_file_path = 'logs/training.log'  # 根据实际文件路径修改
+log_file_path = 'logs/doh_dataset_all_model-training.log'  # 根据实际文件路径修改
 with open(log_file_path, 'r') as file:
     log_data = file.read()
 

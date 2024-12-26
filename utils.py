@@ -7,7 +7,7 @@ from torch.optim import Adam
 import csv
 import matplotlib.pyplot as plt
 
-from model import BiGRU_Attention_Model, BiGRU_Model, BiLSTM_Attention_Model, BiLSTM_Model, CNN_Attention_Model, CNN_BiGRU_Attention_Model, CNN_BiGRU_Model, CNN_BiLSTM_Model, CNN_BiLSTM_Attention_Model, CNN_Model, GRU_Model, LSTM_Model
+from model import BiGRU_Attention_Model, BiGRU_Model, BiLSTM_Attention_Model, BiLSTM_Model, CNN_Attention_Model, CNN_BiGRU_Attention_Model, CNN_BiGRU_Model, CNN_BiLSTM_Model, CNN_BiLSTM_Attention_Model, CNN_Model, GRU_Model, LSTM_Model, RNN_Model, Transformer_Model, MLP_Model
 from train import calculate_metrics, train_model
 from explain import explain_with_shap
 from data_preprocessing import get_dataloaders
@@ -45,7 +45,7 @@ def create_data_splits(use_exist, X, y, k_folds=5, random_state=42, split_file='
     joblib.dump(splits, split_file)
     return splits
 
-def create_fine_tune_splits(use_exist, X_fine_tune, y_fine_tune, test_size=0.1, random_state=42, split_file='fine_tune_splits.pkl'):
+def create_fine_tune_splits(use_exist, X_fine_tune, y_fine_tune, test_size=0.8, random_state=42, split_file='fine_tune_splits.pkl'):
     if use_exist and os.path.exists(split_file):
         splits = joblib.load(split_file)
         return splits
@@ -175,7 +175,31 @@ def initialize_model(model_type, input_dim, output_dim, device, cnn_out_channels
             cnn_out_channels=cnn_out_channels,
             output_dim=output_dim
         ).to(device)
+    
+    elif model_type == 'RNN':
+        return RNN_Model(
+            input_dim=input_dim,
+            hidden_dim=hidden_dim,
+            output_dim=output_dim,
+            num_layers=1
+        ).to(device)
 
+    elif model_type == 'Transformer':
+        return Transformer_Model(
+            input_dim=input_dim,
+            d_model=hidden_dim,  # Transformer hidden dimension
+            nhead=8,             # Number of attention heads
+            num_layers=2,        # Number of transformer layers
+            output_dim=output_dim
+        ).to(device)
+
+    elif model_type == 'MLP':
+        return MLP_Model(
+            input_dim=input_dim,
+            hidden_dim=hidden_dim,
+            output_dim=output_dim
+        ).to(device)
+    
     elif model_type == 'RandomForest':
         return RandomForestClassifier(n_estimators=100, random_state=random_state)
 

@@ -12,6 +12,31 @@ from data_preprocessing import get_dataloaders, get_test_loader, load_data_from_
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 from utils import create_data_splits, create_fine_tune_splits, hyperparameter_search, initialize_model, log_results, set_seed
+from datetime import datetime
+
+
+def setup_logger(model_type):
+    os.makedirs('logs', exist_ok=True)
+    
+    log_filename = f'logs/{model_type}.log'
+    
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_filename),
+            logging.StreamHandler()
+        ]
+    )
+    logging.info(f"Logger initialized for model: {model_type}")
+
+def log_phase(phase_name, status="start"):
+    """Logs the start or end of a phase with clear formatting."""
+    if status == "start":
+        logging.info(f"\n{'=' * 20} STARTING PHASE: {phase_name} {'=' * 20}\n")
+    elif status == "end":
+        logging.info(f"\n{'=' * 20} COMPLETED PHASE: {phase_name} {'=' * 20}\n")
+
 
 def main():
     set_seed(42)
@@ -19,7 +44,7 @@ def main():
     
     # Model configuration parameters
     parser.add_argument('--model_type', type=str, default='CNN_BiLSTM_Attention', 
-                        choices=['CNN_BiLSTM_Attention', 'CNN_BiGRU_Attention', 'CNN_Attention', 'BiGRU_Attention', 'BiLSTM_Attention','CNN_BiGRU', 'CNN_BiLSTM', 'BiLSTM', 'BiGRU', 'LSTM', 'GRU', 'CNN', 'RandomForest', 'XGBoost'],
+                        choices=['CNN_BiLSTM_Attention', 'CNN_BiGRU_Attention', 'CNN_Attention', 'BiGRU_Attention', 'BiLSTM_Attention','CNN_BiGRU', 'CNN_BiLSTM', 'BiLSTM', 'BiGRU', 'LSTM', 'GRU', 'CNN', 'RNN', 'MLP', 'Transformer', 'RandomForest', 'XGBoost'],
                         help='Type of model architecture to use (e.g., CNN_BiLSTM_Attention, BiGRU, etc.).')
     parser.add_argument('--cnn_out_channels', type=int, default=64, help='Number of output channels for CNN layers.')
     parser.add_argument('--hidden_dim', type=int, default=64, help='Hidden size for LSTM/GRU layers.')
@@ -66,17 +91,16 @@ def main():
     parser.add_argument('--use_exist', action='store_true', help='')
 
     args = parser.parse_args()
+    if args.model_type:
+        setup_logger(args.model_type)  # 配置全局日志系统
 
-    os.makedirs('logs', exist_ok=True)
-    logging.basicConfig(filename='logs/training.log', level=logging.INFO, 
-                        format='%(asctime)s - %(levelname)s - %(message)s')
-    logging.info("Started the training, testing, fine-tuning, and explanation process.")
+    log_phase("Overall Process", "start")
     logging.info(f"Using model type: {args.model_type}")
-
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     if args.data_dir:
         # Load and preprocess data
+        log_phase("Data Loading", "start")
         logging.info(f"Training data directory: {args.data_dir}")
         combined_data = load_data_from_directory(args.data_dir)
         X, y, scaler, label_encoder = preprocess_data(combined_data)
@@ -86,6 +110,7 @@ def main():
         data_splits = create_data_splits(args.use_exist, X, y, k_folds=args.k_folds, random_state=42)
         train_val_indices = data_splits['train_val_indices']
         X_train, y_train = data_splits['train_data']
+        log_phase("Data Loading", "end")
     else:
         logging.error("No data_dir is setted!")
 
@@ -101,6 +126,7 @@ def main():
 
     # Hyperparameter search
     if args.hyperparameter_search:
+        log_phase("Hyperparameter Search", "start")
         param_grid_tree = {
             'n_estimators': [100, 200],
             'max_depth': [10, 20, None],
@@ -130,20 +156,29 @@ def main():
             args=args
         )
         logging.info(f"Hyperparameter Search Completed. Best Params: {best_params}, Best Metrics: {best_metrics}")
+        log_phase("Hyperparameter Search", "end")
 
     if args.train:
+        log_phase("Training", "start")
         train_phase(args, model, input_dim, output_dim, X_train, y_train, train_val_indices, device)
+        log_phase("Training", "end")
 
     if args.fine_tune:
+        log_phase("Fine-Tuning", "start")
         fine_tune_phase(args, model, device)
+        log_phase("Fine-Tuning", "end")
 
     if args.test:
+        log_phase("Testing", "start")
         test_phase(args, model, device)
+        log_phase("Testing", "end")
 
     if args.explain:
+        log_phase("Explainability", "start")
         explain_phase(args, model, device)
-           
-    logging.info("Completed all phases")
+        log_phase("Explainability", "end")
+
+    log_phase("Overall Process", "end")
 
 if __name__ == '__main__':
     main()
