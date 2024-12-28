@@ -132,9 +132,9 @@ def load_model(model, optimizer=None, file_path='model_checkpoint.pth'):
 def calculate_metrics(y_true, y_pred, y_pred_proba=None):
     metrics = {
         'accuracy': accuracy_score(y_true, y_pred),
-        'precision': precision_score(y_true, y_pred, average='weighted'),
-        'recall': recall_score(y_true, y_pred, average='weighted'),
-        'f1': f1_score(y_true, y_pred, average='weighted'),
+        'precision': precision_score(y_true, y_pred, average='weighted', zero_division=0),
+        'recall': recall_score(y_true, y_pred, average='weighted', zero_division=0),
+        'f1': f1_score(y_true, y_pred, average='weighted', zero_division=0),
         'confusion_matrix': confusion_matrix(y_true, y_pred).tolist()  # Convert to list for JSON serialization
     }
 
@@ -144,6 +144,7 @@ def calculate_metrics(y_true, y_pred, y_pred_proba=None):
         metrics['loss'] = log_loss(y_true, y_pred_proba)
 
     return metrics
+
 
 def evaluate_model(model, val_loader, device, criterion):
     """
@@ -232,8 +233,8 @@ def train_model(model, model_type, train_loader, val_loader, device, num_epochs=
             logging.info(f"Epoch {epoch+1}/{num_epochs}, Train Metrics: {train_metrics}")
             logging.info(f"Epoch {epoch+1}/{num_epochs}, Validation Metrics: {val_metrics}")
             
-            print(f"Epoch {epoch+1}/{num_epochs}, Train Metrics: {train_metrics}")
-            print(f"Epoch {epoch+1}/{num_epochs}, Validation Metrics: {val_metrics}")
+            # print(f"Epoch {epoch+1}/{num_epochs}, Train Metrics: {train_metrics}")
+            # print(f"Epoch {epoch+1}/{num_epochs}, Validation Metrics: {val_metrics}")
 
             scheduler.step(val_metrics['loss'])
             # Save current model checkpoint

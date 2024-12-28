@@ -6,3 +6,4 @@ lime
 matplotlib
 optuna
 shap==0.46.0
+coloredlogs

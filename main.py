@@ -1,3 +1,4 @@
+import coloredlogs
 import joblib
 import torch
 import logging
@@ -18,16 +19,22 @@ from datetime import datetime
 def setup_logger(model_type):
     os.makedirs('logs', exist_ok=True)
     
-    log_filename = f'logs/{model_type}.log'
+    log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    datefmt = '%Y-%m-%d %H:%M:%S'
     
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_filename),
-            logging.StreamHandler()
-        ]
+    coloredlogs.install(
+        level='INFO',
+        fmt=log_format,
+        datefmt=datefmt,
+        logger=logging.getLogger()
     )
+    
+    file_handler = logging.FileHandler(f'logs/{model_type}.log')
+    file_handler.setLevel(logging.INFO)
+    file_formatter = logging.Formatter(log_format, datefmt=datefmt)
+    file_handler.setFormatter(file_formatter)
+    
+    logging.getLogger().addHandler(file_handler)
     logging.info(f"Logger initialized for model: {model_type}")
 
 def log_phase(phase_name, status="start"):
@@ -44,7 +51,7 @@ def main():
     
     # Model configuration parameters
     parser.add_argument('--model_type', type=str, default='CNN_BiLSTM_Attention', 
-                        choices=['CNN_BiLSTM_Attention', 'CNN_BiGRU_Attention', 'CNN_Attention', 'BiGRU_Attention', 'BiLSTM_Attention','CNN_BiGRU', 'CNN_BiLSTM', 'BiLSTM', 'BiGRU', 'LSTM', 'GRU', 'CNN', 'RNN', 'MLP', 'Transformer', 'RandomForest', 'XGBoost'],
+                        choices=['CNN_BiLSTM_Attention', 'CNN_BiGRU_Attention', 'CNN_Attention', 'BiGRU_Attention', 'BiLSTM_Attention','CNN_BiGRU', 'CNN_BiLSTM', 'BiLSTM', 'BiGRU', 'LSTM', 'GRU', 'CNN', 'RNN', 'DNN', 'MLP', 'Transformer', 'RandomForest', 'XGBoost'],
                         help='Type of model architecture to use (e.g., CNN_BiLSTM_Attention, BiGRU, etc.).')
     parser.add_argument('--cnn_out_channels', type=int, default=64, help='Number of output channels for CNN layers.')
     parser.add_argument('--hidden_dim', type=int, default=64, help='Hidden size for LSTM/GRU layers.')
@@ -60,7 +67,7 @@ def main():
     # Training parameters
     parser.add_argument('--prune', type=float, default=0.3, help='Pruning ratio for model compression.')
     parser.add_argument('--epochs', type=int, default=100, help='Number of training epochs.')
-    parser.add_argument('--k_folds', type=int, default=5, help='Number of folds for cross-validation.')
+    parser.add_argument('--k_folds', type=int, default=2, help='Number of folds for cross-validation.')
     parser.add_argument('--fine_tune_epochs', type=int, default=10, help='Number of epochs for fine-tuning.')
 
     # Optimizer configuration
@@ -88,11 +95,12 @@ def main():
     # Explain
     parser.add_argument('--explain', action='store_true', help='Enable explainability for model predictions.')
     parser.add_argument('--explain_checkpoint_path', type=str, default='explain_checkpoint.pth', help='Path to load checkpoint for explaining.')
-    parser.add_argument('--use_exist', action='store_true', help='')
+    parser.add_argument('--use_exist', default=False, action='store_true', help='')
 
     args = parser.parse_args()
     if args.model_type:
-        setup_logger(args.model_type)  # 配置全局日志系统
+        setup_logger('all')
+        # setup_logger(args.model_type)
 
     log_phase("Overall Process", "start")
     logging.info(f"Using model type: {args.model_type}")
