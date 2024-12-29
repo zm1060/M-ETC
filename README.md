@@ -62,10 +62,18 @@ RealWorld
 Tunnel
 
 
-
+RandomForest   XGBoost
 NOT RUNNING:
 'CNN_Attention', 'BiGRU_Attention', 'BiLSTM_Attention'
 
+
+```shell
+jobs -p | xargs kill
+```
+
+
+nohup python main.py --model_type RandomForest --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
+nohup python main.py --model_type XGBoost --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
 nohup python main.py --model_type CNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
 nohup python main.py --model_type RNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
 nohup python main.py --model_type DNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
@@ -74,10 +82,16 @@ nohup python main.py --model_type GRU --train --epochs 50 --batch_size 64 --data
 nohup python main.py --model_type LSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
 nohup python main.py --model_type BiGRU --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
 nohup python main.py --model_type BiLSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
+nohup python main.py --model_type CNN_GRU --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
+nohup python main.py --model_type CNN_LSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
+nohup python main.py --model_type CNN_GRU_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
+nohup python main.py --model_type CNN_LSTM_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
 nohup python main.py --model_type CNN_BiGRU_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
 nohup python main.py --model_type CNN_BiLSTM_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
 
 
+nohup python main.py --model_type RandomForest --train --epochs 50 --batch_size 64 --data_dir ./csv_output/doh_dataset &
+nohup python main.py --model_type XGBoost --train --epochs 50 --batch_size 64 --data_dir ./csv_output/doh_dataset &
 nohup python main.py --model_type CNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/doh_dataset &
 nohup python main.py --model_type RNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/doh_dataset &
 nohup python main.py --model_type DNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/doh_dataset &
@@ -86,9 +100,16 @@ nohup python main.py --model_type GRU --train --epochs 50 --batch_size 64 --data
 nohup python main.py --model_type LSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/doh_dataset &
 nohup python main.py --model_type BiGRU --train --epochs 50 --batch_size 64 --data_dir ./csv_output/doh_dataset &
 nohup python main.py --model_type BiLSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/doh_dataset &
+nohup python main.py --model_type CNN_GRU --train --epochs 50 --batch_size 64 --data_dir ./csv_output/doh_dataset &
+nohup python main.py --model_type CNN_LSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/doh_dataset &
+nohup python main.py --model_type CNN_GRU_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/doh_dataset &
+nohup python main.py --model_type CNN_LSTM_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/doh_dataset &
 nohup python main.py --model_type CNN_BiGRU_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/doh_dataset &
 nohup python main.py --model_type CNN_BiLSTM_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/doh_dataset &
 
+
+nohup python main.py --model_type RandomForest --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Custom_dataset &
+nohup python main.py --model_type XGBoost --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Custom_dataset &
 nohup python main.py --model_type CNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Custom_dataset &
 nohup python main.py --model_type RNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Custom_dataset &
 nohup python main.py --model_type DNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Custom_dataset &
@@ -97,9 +118,16 @@ nohup python main.py --model_type GRU --train --epochs 50 --batch_size 64 --data
 nohup python main.py --model_type LSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Custom_dataset &
 nohup python main.py --model_type BiGRU --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Custom_dataset &
 nohup python main.py --model_type BiLSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Custom_dataset &
+nohup python main.py --model_type CNN_GRU --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Custom_dataset &
+nohup python main.py --model_type CNN_LSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Custom_dataset &
+nohup python main.py --model_type CNN_GRU_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Custom_dataset &
+nohup python main.py --model_type CNN_LSTM_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Custom_dataset &
 nohup python main.py --model_type CNN_BiGRU_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Custom_dataset &
 nohup python main.py --model_type CNN_BiLSTM_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Custom_dataset &
 
+
+nohup python main.py --model_type RandomForest --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Generated &
+nohup python main.py --model_type XGBoost --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Generated &
 nohup python main.py --model_type CNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Generated &
 nohup python main.py --model_type RNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Generated &
 nohup python main.py --model_type DNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Generated &
@@ -108,9 +136,16 @@ nohup python main.py --model_type GRU --train --epochs 50 --batch_size 64 --data
 nohup python main.py --model_type LSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Generated &
 nohup python main.py --model_type BiGRU --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Generated &
 nohup python main.py --model_type BiLSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Generated &
+nohup python main.py --model_type CNN_GRU --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Generated &
+nohup python main.py --model_type CNN_LSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Generated &
+nohup python main.py --model_type CNN_GRU_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Generated &
+nohup python main.py --model_type CNN_LSTM_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Generated &
 nohup python main.py --model_type CNN_BiGRU_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Generated &
 nohup python main.py --model_type CNN_BiLSTM_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Generated &
 
+
+nohup python main.py --model_type RandomForest --train --epochs 50 --batch_size 64 --data_dir ./csv_output/FiveWeek &
+nohup python main.py --model_type XGBoost --train --epochs 50 --batch_size 64 --data_dir ./csv_output/FiveWeek &
 nohup python main.py --model_type CNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/FiveWeek &
 nohup python main.py --model_type RNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/FiveWeek &
 nohup python main.py --model_type DNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/FiveWeek &
@@ -119,9 +154,16 @@ nohup python main.py --model_type GRU --train --epochs 50 --batch_size 64 --data
 nohup python main.py --model_type LSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/FiveWeek &
 nohup python main.py --model_type BiGRU --train --epochs 50 --batch_size 64 --data_dir ./csv_output/FiveWeek &
 nohup python main.py --model_type BiLSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/FiveWeek &
+nohup python main.py --model_type CNN_GRU --train --epochs 50 --batch_size 64 --data_dir ./csv_output/FiveWeek &
+nohup python main.py --model_type CNN_LSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/FiveWeek &
+nohup python main.py --model_type CNN_GRU_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/FiveWeek &
+nohup python main.py --model_type CNN_LSTM_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/FiveWeek &
 nohup python main.py --model_type CNN_BiGRU_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/FiveWeek &
 nohup python main.py --model_type CNN_BiLSTM_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/FiveWeek &
 
+
+nohup python main.py --model_type RandomForest --train --epochs 50 --batch_size 64 --data_dir ./csv_output/RealWorld &
+nohup python main.py --model_type XGBoost --train --epochs 50 --batch_size 64 --data_dir ./csv_output/RealWorld &
 nohup python main.py --model_type CNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/RealWorld &
 nohup python main.py --model_type RNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/RealWorld &
 nohup python main.py --model_type DNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/RealWorld &
@@ -130,11 +172,17 @@ nohup python main.py --model_type GRU --train --epochs 50 --batch_size 64 --data
 nohup python main.py --model_type LSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/RealWorld &
 nohup python main.py --model_type BiGRU --train --epochs 50 --batch_size 64 --data_dir ./csv_output/RealWorld &
 nohup python main.py --model_type BiLSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/RealWorld &
+nohup python main.py --model_type CNN_GRU --train --epochs 50 --batch_size 64 --data_dir ./csv_output/RealWorld &
+nohup python main.py --model_type CNN_LSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/RealWorld &
+nohup python main.py --model_type CNN_GRU_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/RealWorld &
+nohup python main.py --model_type CNN_LSTM_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/RealWorld &
 nohup python main.py --model_type CNN_BiGRU_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/RealWorld &
 nohup python main.py --model_type CNN_BiLSTM_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/RealWorld &
 
 ####################################################################################################################################################
 
+nohup python main.py --model_type RandomForest --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/CIRA-CIC-DoHBrw-2020-Tunnel &
+nohup python main.py --model_type XGBoost --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/CIRA-CIC-DoHBrw-2020-Tunnel &
 nohup python main.py --model_type CNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/CIRA-CIC-DoHBrw-2020-Tunnel &
 nohup python main.py --model_type RNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/CIRA-CIC-DoHBrw-2020-Tunnel &
 nohup python main.py --model_type DNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/CIRA-CIC-DoHBrw-2020-Tunnel &
@@ -143,9 +191,16 @@ nohup python main.py --model_type GRU --train --epochs 50 --batch_size 64 --data
 nohup python main.py --model_type LSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/CIRA-CIC-DoHBrw-2020-Tunnel &
 nohup python main.py --model_type BiGRU --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/CIRA-CIC-DoHBrw-2020-Tunnel &
 nohup python main.py --model_type BiLSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/CIRA-CIC-DoHBrw-2020-Tunnel &
-nohup python main.py --model_type CNN_BiGRU_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/CIRA-CIC-DoHBrw-2020-Tunnel &
-nohup python main.py --model_type CNN_BiLSTM_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/CIRA-CIC-DoHBrw-2020-Tunnel &
+nohup python main.py --model_type CNN_GRU --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/CIRA-CIC-DoHBrw-2020-Tunnel &
+nohup python main.py --model_type CNN_LSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/CIRA-CIC-DoHBrw-2020-Tunnel &
+nohup python main.py --model_type CNN_GRU_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
+nohup python main.py --model_type CNN_LSTM_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
+nohup python main.py --model_type CNN_BiGRU_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
+nohup python main.py --model_type CNN_BiLSTM_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
 
+
+nohup python main.py --model_type RandomForest --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-DGA-Malware-Traffic-HKD &
+nohup python main.py --model_type XGBoost --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-DGA-Malware-Traffic-HKD &
 nohup python main.py --model_type CNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-DGA-Malware-Traffic-HKD &
 nohup python main.py --model_type RNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-DGA-Malware-Traffic-HKD &
 nohup python main.py --model_type DNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-DGA-Malware-Traffic-HKD &
@@ -154,9 +209,16 @@ nohup python main.py --model_type GRU --train --epochs 50 --batch_size 64 --data
 nohup python main.py --model_type LSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-DGA-Malware-Traffic-HKD &
 nohup python main.py --model_type BiGRU --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-DGA-Malware-Traffic-HKD &
 nohup python main.py --model_type BiLSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-DGA-Malware-Traffic-HKD &
-nohup python main.py --model_type CNN_BiGRU_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-DGA-Malware-Traffic-HKD &
-nohup python main.py --model_type CNN_BiLSTM_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-DGA-Malware-Traffic-HKD &
+nohup python main.py --model_type CNN_GRU --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-DGA-Malware-Traffic-HKD &
+nohup python main.py --model_type CNN_LSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-DGA-Malware-Traffic-HKD &
+nohup python main.py --model_type CNN_GRU_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
+nohup python main.py --model_type CNN_LSTM_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
+nohup python main.py --model_type CNN_BiGRU_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
+nohup python main.py --model_type CNN_BiLSTM_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
 
+
+nohup python main.py --model_type RandomForest --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
+nohup python main.py --model_type XGBoost --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
 nohup python main.py --model_type CNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
 nohup python main.py --model_type RNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
 nohup python main.py --model_type DNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
@@ -165,6 +227,10 @@ nohup python main.py --model_type GRU --train --epochs 50 --batch_size 64 --data
 nohup python main.py --model_type LSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
 nohup python main.py --model_type BiGRU --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
 nohup python main.py --model_type BiLSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
+nohup python main.py --model_type CNN_GRU --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
+nohup python main.py --model_type CNN_LSTM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
+nohup python main.py --model_type CNN_GRU_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
+nohup python main.py --model_type CNN_LSTM_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
 nohup python main.py --model_type CNN_BiGRU_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
 nohup python main.py --model_type CNN_BiLSTM_Attention --train --epochs 50 --batch_size 64 --data_dir ./csv_output/Tunnel/DoH-Tunnel-Traffic-HKD &
 
