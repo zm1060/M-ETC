@@ -1,18 +1,12 @@
 import coloredlogs
-import joblib
 import torch
 import logging
 import argparse
 import os
 import numpy as np
-from torch.optim import Adam
 from phase import explain_phase, fine_tune_phase, test_phase, train_phase
-from train import calculate_metrics, train_model, apply_pruning, load_model, test_model, fine_tune_model, train_baseline_model
-from explain import explain_with_shap
-from data_preprocessing import get_dataloaders, get_test_loader, load_data_from_directory, preprocess_data
-from sklearn.ensemble import RandomForestClassifier
-from xgboost import XGBClassifier
-from utils import create_data_splits, create_fine_tune_splits, hyperparameter_search, initialize_model, log_results, set_seed
+from data_preprocessing import load_data_from_directory, preprocess_data
+from utils import create_data_splits, hyperparameter_search, initialize_model, set_seed
 from datetime import datetime
 
 
@@ -37,13 +31,20 @@ def setup_logger(model_type):
     logging.getLogger().addHandler(file_handler)
     logging.info(f"Logger initialized for model: {model_type}")
 
-def log_phase(phase_name, status="start"):
-    """Logs the start or end of a phase with clear formatting."""
-    if status == "start":
-        logging.info(f"\n{'=' * 20} STARTING PHASE: {phase_name} {'=' * 20}\n")
-    elif status == "end":
-        logging.info(f"\n{'=' * 20} COMPLETED PHASE: {phase_name} {'=' * 20}\n")
 
+def log_phase(phase_name, status="start"):
+    """Logs the start or end of a phase with clear and aligned formatting."""
+    phase_name = phase_name.upper()  # Optional: Make the phase name all caps for emphasis
+    border = '=' * 100  # Border length
+    
+    # Prepare the log message
+    if status == "start":
+        log_message = f"{'STARTING PHASE:':<25} {phase_name:>70}"
+    elif status == "end":
+        log_message = f"{'COMPLETED PHASE:':<25} {phase_name:>70}"
+    
+    # Log the message with borders
+    logging.info(f"\n{border}\n{log_message}\n{border}\n")
 
 def main():
     set_seed(42)
@@ -51,7 +52,7 @@ def main():
     
     # Model configuration parameters
     parser.add_argument('--model_type', type=str, default='CNN_BiLSTM_Attention', 
-                        choices=['CNN_BiLSTM_Attention', 'CNN_BiGRU_Attention', 'CNN_Attention', 'BiGRU_Attention', 'BiLSTM_Attention','CNN_BiGRU', 'CNN_BiLSTM', 'BiLSTM', 'BiGRU', 'LSTM', 'GRU', 'CNN', 'RNN', 'DNN', 'MLP', 'Transformer', 'RandomForest', 'XGBoost'],
+                        choices=['CNN_BiLSTM_Attention', 'CNN_BiGRU_Attention', 'CNN_LSTM_Attention', 'CNN_GRU_Attention', 'CNN_GRU', 'CNN_BiLSTM', 'CNN_Attention', 'BiGRU_Attention', 'BiLSTM_Attention','CNN_BiGRU', 'CNN_BiLSTM', 'BiLSTM', 'BiGRU', 'LSTM', 'GRU', 'CNN', 'RNN', 'DNN', 'MLP', 'Transformer', 'RandomForest', 'XGBoost'],
                         help='Type of model architecture to use (e.g., CNN_BiLSTM_Attention, BiGRU, etc.).')
     parser.add_argument('--cnn_out_channels', type=int, default=64, help='Number of output channels for CNN layers.')
     parser.add_argument('--hidden_dim', type=int, default=64, help='Hidden size for LSTM/GRU layers.')
@@ -95,12 +96,12 @@ def main():
     # Explain
     parser.add_argument('--explain', action='store_true', help='Enable explainability for model predictions.')
     parser.add_argument('--explain_checkpoint_path', type=str, default='explain_checkpoint.pth', help='Path to load checkpoint for explaining.')
-    parser.add_argument('--use_exist', default=False, action='store_true', help='')
+    parser.add_argument('--use_exist', default=True, action='store_true', help='')
 
     args = parser.parse_args()
     if args.model_type:
-        setup_logger('all')
-        # setup_logger(args.model_type)
+        # setup_logger('all')
+        setup_logger(args.model_type)
 
     log_phase("Overall Process", "start")
     logging.info(f"Using model type: {args.model_type}")

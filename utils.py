@@ -7,7 +7,7 @@ from torch.optim import Adam
 import csv
 import matplotlib.pyplot as plt
 
-from model import BiGRU_Attention_Model, BiGRU_Model, BiLSTM_Attention_Model, BiLSTM_Model, CNN_Attention_Model, CNN_BiGRU_Attention_Model, CNN_BiGRU_Model, CNN_BiLSTM_Model, CNN_BiLSTM_Attention_Model, CNN_Model, DNN_Model, GRU_Model, LSTM_Model, RNN_Model, Transformer_Model, MLP_Model
+from model import BiGRU_Attention_Model, BiGRU_Model, BiLSTM_Attention_Model, BiLSTM_Model, CNN_Attention_Model, CNN_BiGRU_Attention_Model, CNN_BiGRU_Model, CNN_BiLSTM_Model, CNN_BiLSTM_Attention_Model, CNN_GRU_Attention_Model, CNN_GRU_Model, CNN_LSTM_Attention_Model, CNN_LSTM_Model, CNN_Model, DNN_Model, GRU_Model, LSTM_Model, RNN_Model, Transformer_Model, MLP_Model
 from train import calculate_metrics, train_model
 from explain import explain_with_shap
 from data_preprocessing import get_dataloaders
@@ -96,7 +96,25 @@ def initialize_model(model_type, input_dim, output_dim, device, cnn_out_channels
             gru_layers=num_layers,
             output_dim=output_dim
         ).to(device)
-
+    
+    elif model_type == 'CNN_LSTM_Attention':
+        return CNN_LSTM_Attention_Model(
+            input_dim=input_dim,
+            cnn_out_channels=cnn_out_channels,
+            lstm_hidden_dim=hidden_dim,
+            lstm_layers=num_layers,
+            output_dim=output_dim
+        ).to(device)
+    
+    elif model_type == 'CNN_GRU_Attention':
+        return CNN_GRU_Attention_Model(
+            input_dim=input_dim,
+            cnn_out_channels=cnn_out_channels,
+            gru_hidden_dim=hidden_dim,
+            gru_layers=num_layers,
+            output_dim=output_dim
+        ).to(device)
+    
     elif model_type == 'CNN_BiLSTM':
         return CNN_BiLSTM_Model(
             input_dim=input_dim,
@@ -114,7 +132,25 @@ def initialize_model(model_type, input_dim, output_dim, device, cnn_out_channels
             gru_layers=num_layers,
             output_dim=output_dim
         ).to(device)
-    
+
+    elif model_type == 'CNN_LSTM':
+        return CNN_LSTM_Model(
+            input_dim=input_dim,
+            cnn_out_channels=cnn_out_channels,
+            lstm_hidden_dim=hidden_dim,
+            lstm_layers=num_layers,
+            output_dim=output_dim
+        ).to(device)
+
+    elif model_type == 'CNN_GRU':
+        return CNN_GRU_Model(
+            input_dim=input_dim,
+            cnn_out_channels=cnn_out_channels,
+            gru_hidden_dim=hidden_dim,
+            gru_layers=num_layers,
+            output_dim=output_dim
+        ).to(device)
+
     elif model_type == 'BiLSTM_Attention':
         return BiLSTM_Attention_Model(
             input_dim=input_dim,
