@@ -52,7 +52,7 @@ def main():
     
     # Model configuration parameters
     parser.add_argument('--model_type', type=str, default='CNN_BiLSTM_Attention', 
-                        choices=['CNN_BiLSTM_Attention', 'CNN_BiGRU_Attention', 'CNN_LSTM_Attention', 'CNN_GRU_Attention', 'CNN_GRU', 'CNN_LSTM', 'CNN_Attention', 'BiGRU_Attention', 'BiLSTM_Attention','CNN_BiGRU', 'CNN_BiLSTM', 'BiLSTM', 'BiGRU', 'LSTM', 'GRU', 'CNN', 'RNN', 'DNN', 'MLP', 'Transformer', 'RandomForest', 'XGBoost'],
+                        choices=['CNN_BiLSTM_Attention', 'CNN_BiGRU_Attention', 'CNN_LSTM_Attention', 'CNN_GRU_Attention', 'CNN_GRU', 'CNN_LSTM', 'CNN_Attention', 'BiGRU_Attention', 'BiLSTM_Attention','CNN_BiGRU', 'CNN_BiLSTM', 'BiLSTM', 'BiGRU', 'LSTM', 'GRU', 'CNN', 'RNN', 'DNN', 'MLP', 'Transformer', 'RandomForest', 'XGBoost', 'LogisticRegression', 'AdaBoost', 'DecisionTree', 'NaiveBayes', 'LDA', 'ExtraTrees', 'CatBoost', 'LightGBM'],
                         help='Type of model architecture to use (e.g., CNN_BiLSTM_Attention, BiGRU, etc.).')
     parser.add_argument('--cnn_out_channels', type=int, default=64, help='Number of output channels for CNN layers.')
     parser.add_argument('--hidden_dim', type=int, default=64, help='Hidden size for LSTM/GRU layers.')
@@ -68,7 +68,7 @@ def main():
     # Training parameters
     parser.add_argument('--prune', type=float, default=0.3, help='Pruning ratio for model compression.')
     parser.add_argument('--epochs', type=int, default=100, help='Number of training epochs.')
-    parser.add_argument('--k_folds', type=int, default=2, help='Number of folds for cross-validation.')
+    parser.add_argument('--k_folds', type=int, default=5, help='Number of folds for cross-validation.')
     parser.add_argument('--fine_tune_epochs', type=int, default=10, help='Number of epochs for fine-tuning.')
 
     # Optimizer configuration
@@ -96,7 +96,7 @@ def main():
     # Explain
     parser.add_argument('--explain', action='store_true', help='Enable explainability for model predictions.')
     parser.add_argument('--explain_checkpoint_path', type=str, default='explain_checkpoint.pth', help='Path to load checkpoint for explaining.')
-    parser.add_argument('--use_exist', default=True, action='store_true', help='')
+    parser.add_argument('--use_exist', default=False, action='store_true', help='')
 
     args = parser.parse_args()
     if args.model_type:

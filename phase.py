@@ -8,9 +8,8 @@ from torch.optim import Adam
 from train import calculate_metrics, train_model, apply_pruning, load_model, test_model, fine_tune_model, train_baseline_model
 from explain import explain_with_shap
 from data_preprocessing import get_dataloaders, get_fine_tune_loader, get_test_loader, load_data_from_directory, preprocess_data, sample_data
-from sklearn.ensemble import RandomForestClassifier
-from xgboost import XGBClassifier
-from utils import create_data_splits, create_fine_tune_splits, hyperparameter_search, initialize_model, log_results, set_seed
+
+from utils import create_fine_tune_splits, initialize_model, log_results
 
 def train_phase(args, model, input_dim, output_dim, X_train, y_train, train_val_indices, device):
     best_val_loss = float('inf')
@@ -20,14 +19,14 @@ def train_phase(args, model, input_dim, output_dim, X_train, y_train, train_val_
         X_train_fold, X_val_fold = X_train[train_idx], X_train[val_idx]
         y_train_fold, y_val_fold = y_train[train_idx], y_train[val_idx]
         train_loader, val_loader = get_dataloaders(X_train_fold, y_train_fold, batch_size=args.batch_size, sample_size=args.sample_size)
-        
-        if args.prune > 0.0 and args.model_type not in ['RandomForest', 'XGBoost', 'Transformer']:
+
+        if args.prune > 0.0 and args.model_type not in ['RandomForest', 'XGBoost', 'LogisticRegression', 'AdaBoost', 'DecisionTree', 'NaiveBayes', 'LDA', 'ExtraTrees', 'CatBoost', 'LightGBM', 'Transformer']:
             apply_pruning(model, amount=args.prune, structured=True, global_prune=False)
 
         dl_checkpoint_path = f"{args.model_type}_fold_{fold}_checkpoint.pth"
         ml_checkpoint_path = f"{args.model_type}_fold_{fold}_checkpoint.pkl"
         
-        if args.model_type in ['RandomForest', 'XGBoost']:
+        if args.model_type in ['RandomForest', 'XGBoost', 'LogisticRegression', 'AdaBoost', 'DecisionTree', 'NaiveBayes', 'LDA', 'ExtraTrees', 'CatBoost', 'LightGBM', 'Transformer']:
             metrics = train_baseline_model(model, args.model_type, X_train_fold, y_train_fold, X_val_fold, y_val_fold, ml_checkpoint_path, save_best=True, best_val_loss=best_val_loss)
         else:
             metrics = train_model(
@@ -87,11 +86,11 @@ def fine_tune_phase(args, model, device):
     X_fine_train, y_fine_train = X_fine_tune[fine_tune_train_indices], y_fine_tune[fine_tune_train_indices]
     X_fine_val, y_fine_val = X_fine_tune[fine_tune_val_indices], y_fine_tune[fine_tune_val_indices]
 
-    if args.model_type in ['RandomForest', 'XGBoost']:
+    if args.model_type in ['RandomForest', 'XGBoost', 'LogisticRegression',    'AdaBoost', 'DecisionTree', 'NaiveBayes', 'LDA', 'ExtraTrees', 'CatBoost', 'LightGBM', 'Transformer']:
         X_fine_train, y_fine_train = sample_data(X_fine_train, y_fine_train, args.sample_size)
         logging.info(f"Sampled data for RandomForest/XGBoost: {len(X_fine_train)} samples.")
         model_file = args.best_checkpoint_path
-        fine_tuned_model = joblib.load(model_file) if os.path.exists(model_file) else RandomForestClassifier(n_estimators=100, random_state=42)
+        fine_tuned_model = joblib.load(model_file)
         fine_tuned_model.fit(X_fine_train, y_fine_train)
         y_fine_pred = fine_tuned_model.predict(X_fine_val)
         y_fine_pred_proba = fine_tuned_model.predict_proba(X_fine_val) if hasattr(fine_tuned_model, "predict_proba") else None
@@ -109,7 +108,7 @@ def fine_tune_phase(args, model, device):
         # fine_tune_metrics = fine_tune_model(model, fine_tune_train_loader, fine_tune_val_loader, device, optimizer=optimizer, num_epochs=args.fine_tune_epochs, pretrained_path=args.best_checkpoint_path)
         fine_tune_metrics = fine_tune_model(
             model=model,
-            model_type="CNN_BiLSTM",
+            model_type=args.model_type,
             train_loader=fine_tune_train_loader,
             val_loader=fine_tune_val_loader,
             device=device,
@@ -132,7 +131,7 @@ def test_phase(args, model, device):
     logging.info(f"Test data directory: {args.test_data_dir}")
     test_data = load_data_from_directory(args.test_data_dir)
     X_test, y_test, _, _ = preprocess_data(test_data)
-    if args.model_type in ['RandomForest', 'XGBoost']:
+    if args.model_type in ['RandomForest', 'XGBoost', 'LogisticRegression',    'AdaBoost', 'DecisionTree', 'NaiveBayes', 'LDA', 'ExtraTrees', 'CatBoost', 'LightGBM']:
         model = joblib.load(args.test_checkpoint_path)
         y_test_pred = model.predict(X_test)
         y_test_pred_proba = model.predict_proba(X_test) if hasattr(model, "predict_proba") else None
@@ -153,7 +152,7 @@ def explain_phase(args, model, device):
     feature_names = explain_data.columns[:-1].tolist()
     class_names = label_encoder.classes_.tolist() if label_encoder else [f'Class_{i}' for i in range(len(np.unique(y_explain)))]
     
-    if args.model_type in ['RandomForest', 'XGBoost']:
+    if args.model_type in ['RandomForest', 'XGBoost', 'LogisticRegression',    'AdaBoost', 'DecisionTree', 'NaiveBayes', 'LDA', 'ExtraTrees', 'CatBoost', 'LightGBM']:
         model = joblib.load(args.explain_checkpoint_path)
         y_pred = model.predict(X_explain)
     else:

@@ -62,6 +62,22 @@ RealWorld
 Tunnel
 
 
+
+XGBoost: 
+[CV 3/3] END colsample_bytree=0.8, gamma=0.1, learning_rate=0.001, max_depth=10, n_estimators=100, subsample=0.8;, score=0.995 total time= 3.1min
+[CV 1/3] END colsample_bytree=0.8, gamma=0.1, learning_rate=0.001, max_depth=10, n_estimators=100, subsample=0.8;, score=0.995 total time= 4.2min
+[CV 1/3] END colsample_bytree=0.8, gamma=0.1, learning_rate=0.001, max_depth=10, n_estimators=100, subsample=0.8;, score=0.995 total time= 4.2min
+[CV 1/3] END colsample_bytree=0.8, gamma=0.1, learning_rate=0.001, max_depth=10, n_estimators=100, subsample=1.0;, score=0.995 total time= 3.7min
+[CV 3/3] END colsample_bytree=0.8, gamma=0.1, learning_rate=0.001, max_depth=10, n_estimators=100, subsample=1.0;, score=0.995 total time= 3.4min
+[CV 2/3] END colsample_bytree=0.8, gamma=0.1, learning_rate=0.001, max_depth=10, n_estimators=100, subsample=1.0;, score=0.995 total time= 4.6min
+[CV 1/3] END colsample_bytree=0.8, gamma=0.1, learning_rate=0.001, max_depth=10, n_estimators=150, subsample=1.0;, score=0.995 total time= 5.3min
+[CV 3/3] END colsample_bytree=0.8, gamma=0.1, learning_rate=0.001, max_depth=10, n_estimators=150, subsample=0.8;, score=0.995 total time= 5.4min
+[CV 1/3] END colsample_bytree=0.8, gamma=0.1, learning_rate=0.001, max_depth=10, n_estimators=150, subsample=0.8;, score=0.995 total time= 6.0min
+[CV 3/3] END colsample_bytree=0.8, gamma=0.1, learning_rate=0.001, max_depth=10, n_estimators=200, subsample=0.8;, score=0.995 total time= 7.3min
+[CV 1/3] END colsample_bytree=0.8, gamma=0.1, learning_rate=0.01, max_depth=5, n_estimators=150, subsample=0.8;, score=0.986 total time= 2.9min
+[CV 2/3] END colsample_bytree=0.8, gamma=0.1, learning_rate=0.001, max_depth=10, n_estimators=200, subsample=1.0;, score=0.995 total time= 6.9min
+[CV 1/3] END colsample_bytree=0.8, gamma=0.1, learning_rate=0.001, max_depth=10, n_estimators=200, subsample=1.0;, score=0.995 total time= 7.6min
+
 RandomForest   XGBoost
 NOT RUNNING:
 'CNN_Attention', 'BiGRU_Attention', 'BiLSTM_Attention'
@@ -72,6 +88,14 @@ jobs -p | xargs kill
 ```
 
 
+nohup python main.py --model_type LogisticRegression --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
+nohup python main.py --model_type AdaBoost --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
+nohup python main.py --model_type DecisionTree --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
+nohup python main.py --model_type NaiveBayes --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
+nohup python main.py --model_type LDA --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
+nohup python main.py --model_type ExtraTrees --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
+nohup python main.py --model_type CatBoost --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
+nohup python main.py --model_type LightGBM --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
 nohup python main.py --model_type RandomForest --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
 nohup python main.py --model_type XGBoost --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
 nohup python main.py --model_type CNN --train --epochs 50 --batch_size 64 --data_dir ./csv_output/CIRA-CIC-DoHBrw-2020 &
