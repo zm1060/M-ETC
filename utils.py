@@ -1,6 +1,9 @@
 import logging
 import os
 import joblib
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.naive_bayes import GaussianNB
+from sklearn.svm import SVC
 import torch
 import numpy as np
 from torch.optim import Adam
@@ -12,8 +15,12 @@ from train import calculate_metrics, train_model
 from explain import explain_with_shap
 from data_preprocessing import get_dataloaders
 from sklearn.model_selection import ParameterGrid, StratifiedKFold, train_test_split
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, ExtraTreesClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from catboost import CatBoostClassifier # type: ignore
 from xgboost import XGBClassifier
+from lightgbm import LGBMClassifier
 
 def log_results(results, log_file='model_performance_log.csv'):
     file_exists = os.path.isfile(log_file)
@@ -247,11 +254,34 @@ def initialize_model(model_type, input_dim, output_dim, device, cnn_out_channels
         return RandomForestClassifier(n_estimators=100, random_state=random_state)
 
     elif model_type == 'XGBoost':
-        return XGBClassifier(use_label_encoder=False, eval_metric='mlogloss', random_state=random_state)
-
+        return XGBClassifier(eval_metric='mlogloss', random_state=random_state)
+    
+    elif model_type == 'LogisticRegression':
+        return LogisticRegression(random_state=random_state, max_iter=1000)
+    
+    elif model_type == 'AdaBoost':
+        return AdaBoostClassifier(n_estimators=50, random_state=random_state)
+    
+    elif model_type == 'DecisionTree':
+        return DecisionTreeClassifier(random_state=random_state)
+    
+    elif model_type == 'NaiveBayes':
+        return GaussianNB()
+    
+    elif model_type == 'LDA':
+        return LinearDiscriminantAnalysis()
+      
+    elif model_type == 'ExtraTrees':
+        return ExtraTreesClassifier(n_estimators=100, random_state=random_state)
+    
+    elif model_type == 'CatBoost':
+        return CatBoostClassifier(iterations=1000, depth=6, learning_rate=0.1, random_state=random_state, verbose=False)
+    
+    elif model_type == 'LightGBM':
+        return LGBMClassifier(n_estimators=100, random_state=random_state)
+    
     else:
         raise ValueError(f"Unsupported model type: {model_type}")
-
 def get_optimizer(model, args):
     """
     Get the optimizer based on the user-specified type and hyperparameters.
