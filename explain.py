@@ -31,9 +31,9 @@ def plot_feature_importance(shap_values, feature_names, description, output_dir,
     filename = f"{description}_feature_importance"
     if class_name:
         filename += f"_{class_name}"
-    filename += ".png"
+    filename += ".jpg"
     filepath = os.path.join(output_dir, filename)
-    plt.savefig(filepath, dpi=300, bbox_inches='tight')
+    plt.savefig(filepath, format='jpg', dpi=300, bbox_inches='tight')
     print(f"Feature importance plot saved to {filepath}")
     plt.close()
 
@@ -88,8 +88,8 @@ def explain_with_shap(model, X_sample, device, feature_names, class_names, origi
             )
             plt.title(f"SHAP Summary Plot for {class_name}")
             # Save as 300 DPI image
-            summary_filename = os.path.join(output_dir, f"{origin_model_type}_{db_name}_{description}_{class_name}.png")
-            plt.savefig(summary_filename, dpi=300, bbox_inches='tight')
+            summary_filename = os.path.join(output_dir, f"{origin_model_type}_{db_name}_{description}_{class_name}.jpg")
+            plt.savefig(summary_filename, format='jpg', dpi=300, bbox_inches='tight')
             print(f"Saved SHAP summary plot to {summary_filename}")
             plt.close()
 
@@ -108,8 +108,8 @@ def explain_with_shap(model, X_sample, device, feature_names, class_names, origi
         print("Generating SHAP summary plot for single-output model")
         shap.summary_plot(shap_values, X_sample, feature_names=feature_names, show=False)
         plt.title("SHAP Summary Plot")
-        summary_filename = os.path.join(output_dir, f"{origin_model_type}_{db_name}_{description}.png")
-        plt.savefig(summary_filename, dpi=300, bbox_inches='tight')
+        summary_filename = os.path.join(output_dir, f"{origin_model_type}_{db_name}_{description}.jpg")
+        plt.savefig(summary_filename, format='jpg', dpi=300, bbox_inches='tight')
         print(f"Saved SHAP summary plot to {summary_filename}")
         plt.close()
 

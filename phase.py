@@ -15,10 +15,19 @@ def train_phase(args, model, input_dim, output_dim, X_train, y_train, train_val_
     best_val_loss = float('inf')
     fold_metrics = []
     aggregated_confusion_matrix = None
+    total_val_samples = 0
+    
     for fold, (train_idx, val_idx) in enumerate(train_val_indices, 1):
         X_train_fold, X_val_fold = X_train[train_idx], X_train[val_idx]
         y_train_fold, y_val_fold = y_train[train_idx], y_train[val_idx]
-        train_loader, val_loader = get_dataloaders(X_train_fold, y_train_fold, batch_size=args.batch_size, sample_size=args.sample_size)
+        
+        total_val_samples += len(val_idx)
+        logging.info(f"Fold {fold} - Validation set size: {len(val_idx)}")
+        
+        # Create train loader without splitting
+        train_loader = get_dataloaders(X_train_fold, y_train_fold, batch_size=args.batch_size, sample_size=args.sample_size)
+        # Create validation loader without splitting
+        val_loader = get_dataloaders(X_val_fold, y_val_fold, batch_size=args.batch_size)
 
         if args.prune > 0.0 and args.model_type not in ['RandomForest', 'XGBoost', 'LogisticRegression', 'AdaBoost', 'DecisionTree', 'NaiveBayes', 'LDA', 'ExtraTrees', 'CatBoost', 'LightGBM', 'Transformer']:
             apply_pruning(model, amount=args.prune, structured=True, global_prune=False)
@@ -50,7 +59,19 @@ def train_phase(args, model, input_dim, output_dim, X_train, y_train, train_val_
         if metrics:
             fold_metrics.append(metrics)
             fold_cm = np.array(metrics['val']['confusion_matrix'])
-            aggregated_confusion_matrix = fold_cm if aggregated_confusion_matrix is None else aggregated_confusion_matrix + fold_cm
+            
+            # Verify confusion matrix samples match validation set size
+            fold_cm_samples = np.sum(fold_cm)
+            if fold_cm_samples != len(val_idx):
+                logging.warning(f"Fold {fold} - Confusion matrix samples ({fold_cm_samples}) "
+                              f"doesn't match validation set size ({len(val_idx)})")
+            
+            # Aggregate confusion matrices
+            if aggregated_confusion_matrix is None:
+                aggregated_confusion_matrix = fold_cm
+            else:
+                aggregated_confusion_matrix += fold_cm
+                
         model = initialize_model(
             model_type=args.model_type,
             input_dim=input_dim,
@@ -62,10 +83,20 @@ def train_phase(args, model, input_dim, output_dim, X_train, y_train, train_val_
         )
     
     if fold_metrics:
+        # Calculate average metrics across folds
         avg_metrics = {
             'train': {metric: np.mean([fold['train'][metric] for fold in fold_metrics]) for metric in fold_metrics[0]['train']},
             'val': {metric: np.mean([fold['val'][metric] for fold in fold_metrics]) for metric in fold_metrics[0]['val']}
         }
+        
+        # Verify final confusion matrix total matches total validation samples
+        final_cm_samples = np.sum(aggregated_confusion_matrix)
+        if final_cm_samples != total_val_samples:
+            logging.warning(f"Final confusion matrix samples ({final_cm_samples}) doesn't match "
+                          f"total validation samples ({total_val_samples})")
+        logging.info(f"Final confusion matrix total samples: {total_val_samples}")
+        logging.info(f"Expected total validation samples: {total_val_samples}")
+        
         results = {
             'model_type': args.model_type,
             'phase': 'train',
@@ -174,10 +205,17 @@ def explain_phase(args, model, device):
     X_misclassified = X_explain[misclassified_indices]
     X_correct = X_explain[correctly_classified_indices]
     
+    # Create output directory if it doesn't exist
+    os.makedirs("shap_outputs", exist_ok=True)
+    
+    # Remove csv_output/ from data dir path
+    db_name = args.explain_data_dir.replace('../csv_output/', '')
+    
     if len(X_misclassified) > 0:
-        explain_with_shap(model, X_sample=X_misclassified, device=device, feature_names=feature_names, class_names=class_names, origin_model_type=args.model_type, db_name=args.explain_data_dir, description='misclassified')
+        explain_with_shap(model, X_sample=X_misclassified, device=device, feature_names=feature_names, class_names=class_names, origin_model_type=args.model_type, db_name=db_name, description='misclassified')
         logging.info("SHAP explanations generated for misclassified samples.")
 
     if len(X_correct) > 0:
-        explain_with_shap(model, X_sample=X_correct, device=device, feature_names=feature_names, class_names=class_names, origin_model_type=args.model_type, db_name=args.explain_data_dir, description='correct')
+        explain_with_shap(model, X_sample=X_correct, device=device, feature_names=feature_names, class_names=class_names, origin_model_type=args.model_type, db_name=db_name, description='correct')
         logging.info("SHAP explanations generated for correctly classified samples.")
+

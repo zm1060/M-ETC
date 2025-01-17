@@ -374,7 +374,8 @@ def hyperparameter_search(param_grid_tree, param_grid_dl, model_type, input_dim,
                 X_train,
                 y_train,
                 batch_size=params.get('batch_size', args.batch_size),
-                sample_size=args.sample_size
+                sample_size=args.sample_size,
+                test_size=0.2
             )
 
             # Train and evaluate

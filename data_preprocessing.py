@@ -60,30 +60,31 @@ def preprocess_data(data, label_column='Label'):
 
     return X, y, scaler, label_encoder
 
-def get_dataloaders(X, y, test_size=0.2, batch_size=64, sample_size=None):
+def get_dataloaders(X, y, batch_size=64, sample_size=None, test_size=None):
     """
-    Splits the dataset into training and validation sets, optionally samples the training set,
-    and creates PyTorch DataLoaders for both sets.
+    Creates PyTorch DataLoaders for training and validation sets.
+    If test_size is provided, splits the data into train and validation sets.
+    If test_size is None, assumes the data is already split (e.g., by k-fold).
 
     Parameters:
-    - X (numpy.ndarray or similar): Feature data.
-    - y (numpy.ndarray or similar): Label data corresponding to X.
-    - test_size (float, optional): Proportion of the dataset to include in the validation split.
-                                    Default is 0.2 (20%).
-    - batch_size (int, optional): Number of samples per batch to load. Default is 64.
-    - sample_size (float or int, optional): If specified, limits the training set to a subset.
-                                            If float, represents the proportion of the training set.
-                                            If int, represents the absolute number of samples.
-                                            Default is None (no sampling).
+    - X (numpy.ndarray): Feature data
+    - y (numpy.ndarray): Label data
+    - batch_size (int): Number of samples per batch
+    - sample_size (float or int): If specified, limits the training set to a subset
+    - test_size (float): If provided, splits data into train and validation sets
 
     Returns:
-    - train_loader (DataLoader): DataLoader for the training set.
-    - val_loader (DataLoader): DataLoader for the validation set.
+    - train_loader (DataLoader): DataLoader for the training set
+    - val_loader (DataLoader): DataLoader for the validation set (if test_size is provided)
     """
-
-    X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=test_size, random_state=42, stratify=y
-    )
+    if test_size is not None:
+        X_train, X_val, y_train, y_val = train_test_split(
+            X, y, test_size=test_size, random_state=42, stratify=y
+        )
+    else:
+        # If test_size is None, assume data is already split
+        X_train, y_train = X, y
+        X_val, y_val = None, None
 
     if sample_size:
         if isinstance(sample_size, float) and 0 < sample_size < 1:
@@ -98,22 +99,26 @@ def get_dataloaders(X, y, test_size=0.2, batch_size=64, sample_size=None):
 
         indices = np.random.choice(len(X_train), sample_size, replace=False)
         X_train, y_train = X_train[indices], y_train[indices]
+
     train_dataset = TensorDataset(
         torch.tensor(X_train, dtype=torch.float32),
         torch.tensor(y_train, dtype=torch.long)
     )
-    val_dataset = TensorDataset(
-        torch.tensor(X_val, dtype=torch.float32),
-        torch.tensor(y_val, dtype=torch.long)
-    )
     train_loader = DataLoader(
         train_dataset, batch_size=batch_size, shuffle=True
     )
-    val_loader = DataLoader(
-        val_dataset, batch_size=batch_size
-    )
-    
-    return train_loader, val_loader
+
+    if X_val is not None and y_val is not None:
+        val_dataset = TensorDataset(
+            torch.tensor(X_val, dtype=torch.float32),
+            torch.tensor(y_val, dtype=torch.long)
+        )
+        val_loader = DataLoader(
+            val_dataset, batch_size=batch_size
+        )
+        return train_loader, val_loader
+    else:
+        return train_loader
 
 def get_fine_tune_loader(X_fine_train, y_fine_train, X_fine_val, y_fine_val, sample_size, batch_size=64):
     """

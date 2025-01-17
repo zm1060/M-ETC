@@ -543,15 +543,6 @@ class Attention(nn.Module):
         context_vector = torch.sum(lstm_out * attention_weights.unsqueeze(-1), dim=1)
         return context_vector, attention_weights
 
-class MultiHeadAttention(nn.Module):
-    def __init__(self, hidden_dim, num_heads=8):
-        super(MultiHeadAttention, self).__init__()
-        self.multihead_attn = nn.MultiheadAttention(embed_dim=hidden_dim * 2, num_heads=num_heads, batch_first=True)
-    def forward(self, lstm_out):
-        attn_output, attn_weights = self.multihead_attn(lstm_out, lstm_out, lstm_out)
-        context_vector = torch.mean(attn_output, dim=1)
-        return context_vector, attn_weights
-
 class ConvAttention(nn.Module):
     def __init__(self, hidden_dim, kernel_size=3):
         super(ConvAttention, self).__init__()
@@ -564,7 +555,14 @@ class ConvAttention(nn.Module):
         context_vector = torch.sum(lstm_out * attention_weights.unsqueeze(-1), dim=1)
         return context_vector, attention_weights
 
-
+class MultiHeadAttention(nn.Module):
+    def __init__(self, hidden_dim, num_heads=8):
+        super(MultiHeadAttention, self).__init__()
+        self.multihead_attn = nn.MultiheadAttention(embed_dim=hidden_dim * 2, num_heads=num_heads, batch_first=True)
+    def forward(self, lstm_out):
+        attn_output, attn_weights = self.multihead_attn(lstm_out, lstm_out, lstm_out)
+        context_vector = torch.mean(attn_output, dim=1)
+        return context_vector, attn_weights
 
 class CNN_BiLSTM_Attention_Model(nn.Module):
     def __init__(self, input_dim, cnn_out_channels, lstm_hidden_dim, lstm_layers, output_dim):
@@ -587,7 +585,7 @@ class CNN_BiLSTM_Attention_Model(nn.Module):
             bidirectional=True
         )
         self.layer_norm = nn.LayerNorm(lstm_hidden_dim * 2)
-        self.attention = MultiHeadAttention(lstm_hidden_dim, num_heads=4)
+        self.attention = MultiHeadAttention(lstm_hidden_dim, num_heads=8)
         self.fc = nn.Sequential(
             nn.Linear(lstm_hidden_dim * 2, 128),
             nn.ReLU(),
@@ -631,7 +629,7 @@ class CNN_BiGRU_Attention_Model(nn.Module):
             dropout=gru_dropout
         )
         self.layer_norm = nn.LayerNorm(gru_hidden_dim * 2)
-        self.attention = MultiHeadAttention(gru_hidden_dim, num_heads=4)
+        self.attention = MultiHeadAttention(gru_hidden_dim, num_heads=8)
         self.fc = nn.Sequential(
             nn.Linear(gru_hidden_dim * 2, 128),
             nn.ReLU(),

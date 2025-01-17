@@ -130,12 +130,15 @@ def load_model(model, optimizer=None, file_path='model_checkpoint.pth'):
 
 
 def calculate_metrics(y_true, y_pred, y_pred_proba=None):
+    # Get unique labels in sorted order to ensure consistent matrix dimensions
+    labels = sorted(list(set(y_true) | set(y_pred)))
+    
     metrics = {
         'accuracy': accuracy_score(y_true, y_pred),
         'precision': precision_score(y_true, y_pred, average='weighted', zero_division=0),
         'recall': recall_score(y_true, y_pred, average='weighted', zero_division=0),
         'f1': f1_score(y_true, y_pred, average='weighted', zero_division=0),
-        'confusion_matrix': confusion_matrix(y_true, y_pred).tolist()  # Convert to list for JSON serialization
+        'confusion_matrix': confusion_matrix(y_true, y_pred, labels=labels).tolist()  # Use consistent label ordering
     }
 
     if y_pred_proba is not None:

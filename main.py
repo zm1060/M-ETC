@@ -81,10 +81,10 @@ def main():
     # Data and file paths
     parser.add_argument('--batch_size', type=int, default=64, help='Batch size for training and validation.')
     parser.add_argument('--sample_size', type=float, help='Fraction of training data to use (0 < sample_size <= 1).')
-    parser.add_argument('--data_dir', type=str, default='./csv_output/CIRA-CIC-DoHBrw-2020', help='Directory containing training data.')
+    parser.add_argument('--data_dir', type=str, default='../csv_output/CIRA-CIC-DoHBrw-2020', help='Directory containing training data.')
     parser.add_argument('--fine_tune_data_dir', type=str, help='Directory containing fine-tuning data.')
-    parser.add_argument('--test_data_dir', type=str, default='./csv_output/doh_dataset', help='Directory containing test data.')
-    parser.add_argument('--explain_data_dir', type=str, default='./csv_output/doh_dataset', help='Directory containing explain data.')
+    parser.add_argument('--test_data_dir', type=str, default='../csv_output/doh_dataset', help='Directory containing test data.')
+    parser.add_argument('--explain_data_dir', type=str, default='../csv_output/doh_dataset', help='Directory containing explain data.')
     parser.add_argument('--checkpoint_path', type=str, default='model_checkpoint.pth', help='Path to save training checkpoint.')
     parser.add_argument('--best_checkpoint_path', type=str, default='best_model_checkpoint.pth', help='Path to save the best model checkpoint.')
     parser.add_argument('--test_checkpoint_path', type=str, default='test_model_checkpoint.pth', help='Path to load checkpoint for testing.')
@@ -113,6 +113,14 @@ def main():
         logging.info(f"Training data directory: {args.data_dir}")
         combined_data = load_data_from_directory(args.data_dir)
         X, y, scaler, label_encoder = preprocess_data(combined_data)
+        
+        # Print label distribution
+        unique_labels, label_counts = np.unique(y, return_counts=True)
+        logging.info("Label distribution:")
+        for label, count in zip(unique_labels, label_counts):
+            label_name = label_encoder.inverse_transform([label])[0]
+            logging.info(f"{label_name}: {count} samples")
+            
         input_dim = X.shape[1]
         output_dim = len(label_encoder.classes_)
         # Create or load consistent train-validation splits
