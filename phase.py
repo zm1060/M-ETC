@@ -112,8 +112,8 @@ def fine_tune_phase(args, model, device):
     fine_tune_data = load_data_from_directory(args.fine_tune_data_dir)
     X_fine_tune, y_fine_tune, _, _ = preprocess_data(fine_tune_data)
     fine_tune_splits = create_fine_tune_splits(args.use_exist, X_fine_tune, y_fine_tune, test_size=0.8)
-    fine_tune_train_indices = fine_tune_splits['fine_tune_train_indices']
-    fine_tune_val_indices = fine_tune_splits['fine_tune_val_indices']
+    fine_tune_train_indices = fine_tune_splits['fine_tune_train_indices']  # 0.8
+    fine_tune_val_indices = fine_tune_splits['fine_tune_val_indices']      # 0.2
     X_fine_train, y_fine_train = X_fine_tune[fine_tune_train_indices], y_fine_tune[fine_tune_train_indices]
     X_fine_val, y_fine_val = X_fine_tune[fine_tune_val_indices], y_fine_tune[fine_tune_val_indices]
 
@@ -121,9 +121,54 @@ def fine_tune_phase(args, model, device):
         X_fine_train, y_fine_train = sample_data(X_fine_train, y_fine_train, args.sample_size)
         logging.info(f"Sampled data for RandomForest/XGBoost: {len(X_fine_train)} samples.")
         model_file = args.best_checkpoint_path
-        fine_tuned_model = joblib.load(model_file)
-        fine_tuned_model.fit(X_fine_train, y_fine_train)
-        y_fine_pred = fine_tuned_model.predict(X_fine_val)
+        
+        if args.model_type == 'XGBoost':
+            import xgboost as xgb
+            num_classes = len(np.unique(y_fine_train))
+            logging.info(f"Number of classes for fine-tuning: {num_classes}")
+            
+            # Load the model parameters
+            old_model = joblib.load(model_file)
+            params = old_model.get_params()
+            
+            # Update parameters for multi-class classification
+            if num_classes > 2:
+                params.update({
+                    'objective': 'multi:softprob',
+                    'num_class': num_classes
+                })
+            else:
+                params.update({
+                    'objective': 'binary:logistic'
+                })
+            
+            # Create a new model with the updated parameters
+            fine_tuned_model = xgb.XGBClassifier(**params)
+        elif args.model_type == 'LogisticRegression':
+            from sklearn.linear_model import LogisticRegression
+            num_classes = len(np.unique(y_fine_train))
+            
+            # Load the old model to get its parameters
+            old_model = joblib.load(model_file)
+            params = old_model.get_params()
+            
+            # Update multi_class parameter based on number of classes
+            if num_classes > 2:
+                params['multi_class'] = 'multinomial'
+            else:
+                params['multi_class'] = 'ovr'
+                
+            # Remove any deprecated parameters
+            params.pop('multi_class_old', None)
+            params.pop('multi_class_deprecated', None)
+            
+            # Create a new model with the updated parameters
+            fine_tuned_model = LogisticRegression(**params)
+        else:
+            fine_tuned_model = joblib.load(model_file)
+        
+        fine_tuned_model.fit(X_fine_train, y_fine_train)   # fine-tune
+        y_fine_pred = fine_tuned_model.predict(X_fine_val) # test
         y_fine_pred_proba = fine_tuned_model.predict_proba(X_fine_val) if hasattr(fine_tuned_model, "predict_proba") else None
         fine_tune_metrics = calculate_metrics(y_fine_val, y_fine_pred, y_fine_pred_proba)
         joblib.dump(fine_tuned_model, f"{args.model_type}_fine_tuned_model.pkl")
@@ -134,8 +179,8 @@ def fine_tune_phase(args, model, device):
             sample_size=args.sample_size,
             batch_size=args.batch_size
         )
-        logging.info(f"Sampled data for RandomForest/XGBoost: {len(X_fine_train)} samples.")
-        optimizer = Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-4)
+        logging.info(f"Sampled data for fine-tuning: {len(fine_tune_train_loader.dataset)} samples.")
+        # optimizer = Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-4)
         # fine_tune_metrics = fine_tune_model(model, fine_tune_train_loader, fine_tune_val_loader, device, optimizer=optimizer, num_epochs=args.fine_tune_epochs, pretrained_path=args.best_checkpoint_path)
         fine_tune_metrics = fine_tune_model(
             model=model,

@@ -1,5 +1,9 @@
 *.pth
 *.pkl
 *.pyc
+*.txt
+*.csv
 */__pycache__
 csv_output/
+CIRA-CIC-DoHBrw-2020/
+logs/

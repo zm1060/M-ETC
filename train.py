@@ -10,9 +10,15 @@ from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import torch.nn.utils.prune as prune
 import logging
-from sklearn.metrics import accuracy_score, log_loss, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix, cohen_kappa_score
+from sklearn.metrics import accuracy_score, log_loss, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix, cohen_kappa_score, precision_recall_curve, average_precision_score
 from tqdm import tqdm
 from xgboost import XGBClassifier
+from sklearn.utils.class_weight import compute_class_weight
+from torch.utils.data import WeightedRandomSampler
+import torch.nn.functional as F
+from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import TomekLinks
+from imblearn.combine import SMOTETomek
 
 
 # def apply_pruning(model, amount=0.3):
@@ -130,22 +136,48 @@ def load_model(model, optimizer=None, file_path='model_checkpoint.pth'):
 
 
 def calculate_metrics(y_true, y_pred, y_pred_proba=None):
-    # Get unique labels in sorted order to ensure consistent matrix dimensions
+    """扩展评估指标以更好地处理不平衡数据集"""
+    # 获取唯一标签
     labels = sorted(list(set(y_true) | set(y_pred)))
+    n_classes = len(labels)
     
     metrics = {
         'accuracy': accuracy_score(y_true, y_pred),
         'precision': precision_score(y_true, y_pred, average='weighted', zero_division=0),
         'recall': recall_score(y_true, y_pred, average='weighted', zero_division=0),
         'f1': f1_score(y_true, y_pred, average='weighted', zero_division=0),
-        'confusion_matrix': confusion_matrix(y_true, y_pred, labels=labels).tolist()  # Use consistent label ordering
+        'confusion_matrix': confusion_matrix(y_true, y_pred, labels=labels).tolist(),
+        # 添加类别特定的指标
+        'per_class_precision': precision_score(y_true, y_pred, average=None, zero_division=0).tolist(),
+        'per_class_recall': recall_score(y_true, y_pred, average=None, zero_division=0).tolist(),
+        'per_class_f1': f1_score(y_true, y_pred, average=None, zero_division=0).tolist()
     }
-
+    
     if y_pred_proba is not None:
         y_pred_proba = np.array(y_pred_proba)
         y_pred_proba /= y_pred_proba.sum(axis=1, keepdims=True)
         metrics['loss'] = log_loss(y_true, y_pred_proba)
-
+        
+        # 计算每个类别的PR-AUC
+        if n_classes == 2:
+            # 二分类情况
+            metrics['average_precision'] = average_precision_score(
+                y_true, y_pred_proba[:, 1]
+            )
+        else:
+            # 多分类情况：计算每个类别的PR-AUC，然后取加权平均
+            y_true_bin = np.eye(n_classes)[y_true]  # 转换为one-hot编码
+            metrics['average_precision'] = average_precision_score(
+                y_true_bin, y_pred_proba, average='weighted'
+            )
+            
+            # 添加每个类别的PR-AUC
+            per_class_ap = []
+            for i in range(n_classes):
+                ap_i = average_precision_score(y_true_bin[:, i], y_pred_proba[:, i])
+                per_class_ap.append(ap_i)
+            metrics['per_class_average_precision'] = per_class_ap
+    
     return metrics
 
 
@@ -203,6 +235,14 @@ def train_model(model, model_type, train_loader, val_loader, device, num_epochs=
         # Load model if resuming
         if resume:
             model, optimizer, start_epoch = load_model(model, optimizer, checkpoint_path)
+
+        # Calculate class weights
+        y_train = np.array([y for _, y in train_loader.dataset])
+        class_weights = get_class_weights(y_train)
+        
+        # Use weighted loss function
+        criterion = WeightedCrossEntropyLoss(class_weights)
+
         for epoch in range(start_epoch, num_epochs):
             model.train()
             start_time = time.time()
@@ -428,3 +468,44 @@ def inspect_checkpoint(pretrained_path):
         logging.info(f"Checkpoint keys: {model_state_dict_keys}")
     else:
         logging.error(f"Checkpoint file {pretrained_path} not found.")
+
+def get_class_weights(y):
+    """计算类别权重"""
+    return compute_class_weight('balanced', classes=np.unique(y), y=y)
+
+def get_weighted_sampler(y):
+    """创建加权采样器用于不平衡数据集"""
+    class_counts = np.bincount(y)
+    weights = 1. / class_counts
+    sample_weights = weights[y]
+    sampler = WeightedRandomSampler(
+        weights=sample_weights,
+        num_samples=len(y),
+        replacement=True
+    )
+    return sampler
+
+class WeightedCrossEntropyLoss(nn.Module):
+    """带类别权重的交叉熵损失"""
+    def __init__(self, class_weights):
+        super(WeightedCrossEntropyLoss, self).__init__()
+        self.class_weights = torch.FloatTensor(class_weights)
+        
+    def forward(self, input, target):
+        if self.class_weights.device != input.device:
+            self.class_weights = self.class_weights.to(input.device)
+        return F.cross_entropy(input, target, weight=self.class_weights)
+
+def apply_sampling_strategy(X, y, strategy='smote'):
+    """应用不同的采样策略来平衡数据集"""
+    if strategy == 'smote':
+        sampler = SMOTE(random_state=42)
+    elif strategy == 'adasyn':
+        sampler = ADASYN(random_state=42)
+    elif strategy == 'tomek':
+        sampler = TomekLinks()
+    elif strategy == 'combined':
+        sampler = SMOTETomek(random_state=42)
+    
+    X_resampled, y_resampled = sampler.fit_resample(X, y)
+    return X_resampled, y_resampled

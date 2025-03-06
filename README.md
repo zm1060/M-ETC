@@ -406,6 +406,87 @@ python main.py --model_type CNN_Attention --train --epochs 100 --batch_size 256 
 ### Fine-Tuning
 Fine-tune a pre-trained model on a new dataset.
 
+
+python main.py --model_type CNN_BiGRU_Attention --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 20 --best_checkpoint_path CNN_BiGRU_Attention_best_model_checkpoint.pth --sample_size 0.3
+python main.py --model_type CNN_BiGRU_Attention --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path CNN_BiGRU_Attention_fine_tuned_best_model.pth
+
+python main.py --model_type XGBoost --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 20 --best_checkpoint_path XGBoost_best_model_checkpoint.pkl --sample_size 0.3
+python main.py --model_type XGBoost --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path XGBoost_fine_tuned_model.pkl
+
+python main.py --model_type CNN --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path CNN_best_model_checkpoint.pth --sample_size 0.1
+python main.py --model_type CNN --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path CNN_fine_tuned_best_model.pth
+
+python main.py --model_type LSTM --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path LSTM_best_model_checkpoint.pth --sample_size 0.1
+python main.py --model_type LSTM --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path LSTM_fine_tuned_best_model.pth
+
+python main.py --model_type GRU --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path GRU_best_model_checkpoint.pth --sample_size 0.1
+python main.py --model_type GRU --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path GRU_fine_tuned_best_model.pth
+
+python main.py --model_type BiLSTM --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path BiLSTM_best_model_checkpoint.pth --sample_size 0.1
+python main.py --model_type BiLSTM --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path BiLSTM_fine_tuned_best_model.pth
+
+python main.py --model_type BiGRU --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path BiGRU_best_model_checkpoint.pth --sample_size 0.1
+python main.py --model_type BiGRU --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path BiGRU_fine_tuned_best_model.pth
+
+python main.py --model_type RNN --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path RNN_best_model_checkpoint.pth --sample_size 0.1
+python main.py --model_type RNN --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path RNN_fine_tuned_best_model.pth
+
+python main.py --model_type DNN --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path DNN_best_model_checkpoint.pth --sample_size 0.1
+python main.py --model_type DNN --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path DNN_fine_tuned_best_model.pth
+
+python main.py --model_type MLP --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path MLP_best_model_checkpoint.pth --sample_size 0.1
+python main.py --model_type MLP --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path MLP_fine_tuned_best_model.pth
+
+python main.py --model_type CNN_GRU --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path CNN_GRU_best_model_checkpoint.pth --sample_size 0.1
+python main.py --model_type CNN_GRU --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path CNN_GRU_fine_tuned_best_model.pth
+
+python main.py --model_type CNN_LSTM --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path CNN_LSTM_best_model_checkpoint.pth --sample_size 0.1
+python main.py --model_type CNN_LSTM --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path CNN_LSTM_fine_tuned_best_model.pth
+
+python main.py --model_type CNN_GRU_Attention --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path CNN_GRU_Attention_best_model_checkpoint.pth --sample_size 0.1
+python main.py --model_type CNN_GRU_Attention --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path CNN_GRU_Attention_fine_tuned_best_model.pth
+
+python main.py --model_type CNN_LSTM_Attention --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path CNN_LSTM_Attention_best_model_checkpoint.pth --sample_size 0.1
+python main.py --model_type CNN_LSTM_Attention --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path CNN_LSTM_Attention_fine_tuned_best_model.pth
+
+python main.py --model_type CNN_BiLSTM_Attention --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path CNN_BiLSTM_Attention_best_model_checkpoint.pth --sample_size 0.1
+python main.py --model_type CNN_BiLSTM_Attention --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path CNN_BiLSTM_Attention_fine_tuned_best_model.pth
+
+python main.py --model_type CNN_BiLSTM --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path CNN_BiLSTM_best_model_checkpoint.pth --sample_size 0.1
+python main.py --model_type CNN_BiLSTM --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path CNN_BiLSTM_fine_tuned_best_model.pth
+
+python main.py --model_type CNN_Attention --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path CNN_Attention_best_model_checkpoint.pth --sample_size 0.1
+python main.py --model_type CNN_Attention --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path CNN_Attention_fine_tuned_best_model.pth
+
+python main.py --model_type RandomForest --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path RandomForest_best_model_checkpoint.pkl --sample_size 0.1
+python main.py --model_type RandomForest --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path RandomForest_fine_tuned_model.pkl
+
+python main.py --model_type LogisticRegression --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path LogisticRegression_best_model_checkpoint.pkl --sample_size 0.1
+python main.py --model_type LogisticRegression --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path LogisticRegression_fine_tuned_model.pkl
+
+python main.py --model_type AdaBoost --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path AdaBoost_best_model_checkpoint.pkl --sample_size 0.1
+python main.py --model_type AdaBoost --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path AdaBoost_fine_tuned_model.pkl
+
+python main.py --model_type DecisionTree --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path DecisionTree_best_model_checkpoint.pkl --sample_size 0.1
+python main.py --model_type DecisionTree --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path DecisionTree_fine_tuned_model.pkl
+
+python main.py --model_type NaiveBayes --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path NaiveBayes_best_model_checkpoint.pkl --sample_size 0.1
+python main.py --model_type NaiveBayes --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path NaiveBayes_fine_tuned_model.pkl
+
+python main.py --model_type LDA --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path LDA_best_model_checkpoint.pkl --sample_size 0.1
+python main.py --model_type LDA --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path LDA_fine_tuned_model.pkl
+
+python main.py --model_type ExtraTrees --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path ExtraTrees_best_model_checkpoint.pkl --sample_size 0.1
+python main.py --model_type ExtraTrees --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path ExtraTrees_fine_tuned_model.pkl
+
+python main.py --model_type CatBoost --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path CatBoost_best_model_checkpoint.pkl --sample_size 0.1
+python main.py --model_type CatBoost --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path CatBoost_fine_tuned_model.pkl
+
+python main.py --model_type LightGBM --fine_tune --fine_tune_data_dir ../csv_output/RealWorld --fine_tune_epochs 10 --best_checkpoint_path LightGBM_best_model_checkpoint.pkl --sample_size 0.1
+python main.py --model_type LightGBM --test --test_data_dir ../csv_output/RealWorld --test_checkpoint_path LightGBM_fine_tuned_model.pkl
+
+
+
 #### Example Commands
 ```shell
 python main.py --model_type CNN_BiLSTM_Attention --fine_tune --fine_tune_data_dir ../csv_output/CIRA-CIC-DoHBrw-2020 --fine_tune_epochs 10 --best_checkpoint_path CNN_BiLSTM_Attention_best_model_checkpoint.pth
