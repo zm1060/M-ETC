@@ -3,6 +3,10 @@
 *.pyc
 *.txt
 *.csv
+*.json
+*.jpg
+*.png
+*.tsv
 */__pycache__
 csv_output/
 CIRA-CIC-DoHBrw-2020/
