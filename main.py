@@ -98,6 +98,14 @@ def main():
     parser.add_argument('--explain_checkpoint_path', type=str, default='explain_checkpoint.pth', help='Path to load checkpoint for explaining.')
     parser.add_argument('--use_exist', default=False, action='store_true', help='')
 
+    # Data balancing options
+    parser.add_argument('--use_smote', action='store_true', help='Use SMOTE for handling imbalanced data')
+    parser.add_argument('--sampling_strategy', type=str, default='auto', 
+                       choices=['auto', 'minority', 'not minority', 'not majority', 'all'],
+                       help='Sampling strategy for SMOTE')
+    parser.add_argument('--k_neighbors', type=int, default=5, 
+                       help='Number of nearest neighbors to use for SMOTE')
+
     args = parser.parse_args()
     if args.model_type:
         # setup_logger('all')
@@ -114,12 +122,30 @@ def main():
         combined_data = load_data_from_directory(args.data_dir)
         X, y, scaler, label_encoder = preprocess_data(combined_data)
         
-        # Print label distribution
+        # Print original label distribution
         unique_labels, label_counts = np.unique(y, return_counts=True)
-        logging.info("Label distribution:")
+        logging.info("Original label distribution:")
         for label, count in zip(unique_labels, label_counts):
             label_name = label_encoder.inverse_transform([label])[0]
             logging.info(f"{label_name}: {count} samples")
+        
+        # Apply SMOTE if enabled (before splitting)
+        if args.use_smote:
+            logging.info(f"Applying SMOTE with strategy '{args.sampling_strategy}' and k_neighbors={args.k_neighbors}")
+            from imblearn.over_sampling import SMOTE
+            smote = SMOTE(
+                sampling_strategy=args.sampling_strategy,
+                k_neighbors=args.k_neighbors,
+                random_state=42
+            )
+            X, y = smote.fit_resample(X, y)
+            
+            # Print distribution after SMOTE
+            unique_labels, label_counts = np.unique(y, return_counts=True)
+            logging.info("Label distribution after SMOTE:")
+            for label, count in zip(unique_labels, label_counts):
+                label_name = label_encoder.inverse_transform([label])[0]
+                logging.info(f"{label_name}: {count} samples")
             
         input_dim = X.shape[1]
         output_dim = len(label_encoder.classes_)
