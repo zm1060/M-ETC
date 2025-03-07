@@ -1,8 +1,9 @@
 # Project README
 
 ## Announcement:
-This project is the official implementation of the code for the paper titled "INSERT PAPER TITLE HERE". If you use this code or find it helpful in your research, please cite the paper:
-xxx
+This project is the official implementation of the code for the paper titled "METC: A Hybrid Deep Learning Framework for Cross-Network Encrypted DNS over
+HTTPS Traffic Detection and Tunnel Identification". If you use this code or find it helpful in your research, please cite the paper:
+....
 
 
 ## Overview
