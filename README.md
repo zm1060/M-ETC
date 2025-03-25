@@ -3,6 +3,7 @@
 ## Announcement:
 This project is the official implementation of the code for the paper titled "METC: A Hybrid Deep Learning Framework for Cross-Network Encrypted DNS over
 HTTPS Traffic Detection and Tunnel Identification". If you use this code or find it helpful in your research, please cite the paper:
+M. Zuo, C. Guo, H. Xu et al., METC: A Hybrid Deep Learning Framework for Cross-Network Encrypted DNS over HTTPS Traffic Detection and Tunnel Identification, Information Fusion (2025), doi: https://doi.org/10.1016/j.inffus.2025.103125.
 ....
 
 
