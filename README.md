@@ -4,6 +4,20 @@
 This project is the official implementation of the code for the paper titled "METC: A Hybrid Deep Learning Framework for Cross-Network Encrypted DNS over
 HTTPS Traffic Detection and Tunnel Identification". If you use this code or find it helpful in your research, please cite the paper:
 M. Zuo, C. Guo, H. Xu et al., METC: A Hybrid Deep Learning Framework for Cross-Network Encrypted DNS over HTTPS Traffic Detection and Tunnel Identification, Information Fusion (2025), doi: https://doi.org/10.1016/j.inffus.2025.103125.
+```
+@article{ZUO2025103125,
+title = {METC: A Hybrid Deep Learning Framework for Cross-Network Encrypted DNS over HTTPS Traffic Detection and Tunnel Identification},
+journal = {Information Fusion},
+pages = {103125},
+year = {2025},
+issn = {1566-2535},
+doi = {https://doi.org/10.1016/j.inffus.2025.103125},
+url = {https://www.sciencedirect.com/science/article/pii/S1566253525001988},
+author = {Ming Zuo and Changyong Guo and Haiyan Xu and Zhaoxin Zhang and Yanan Cheng},
+keywords = {DNS over HTTPS (DoH), Encrypted Traffic Detection, Tunnel Identification, Deep Learning, Machine Learning, Network Security},
+abstract = {With the widespread adoption of DNS over HTTPS (DoH), network privacy and security have significantly improved, but detecting encrypted DoH traffic remains challenging, especially in heterogeneous environments. Existing research primarily focuses on desktops, neglecting mobile-specific detection. To address this gap, we propose METC, a multi-stage hybrid learning framework for encrypted DoH traffic detection. We develop a mobile traffic collection tool supporting IPv6 and real-time inference and release the first mobile DoH dataset, comprising 38.21 GB of data. METC integrates Convolutional Neural Networks (CNNs), Bidirectional Gated Recurrent Units (BiGRUs), and multi-head attention mechanisms, effectively capturing local traffic patterns, temporal dependencies, and key features to enhance cross-network generalization. Our CNN-BiGRU-Attention model achieves an F1-score of 97.34% in mobile DoH detection and 99.96%, 95.99%, and 94.65% in DoH-based tunnel traffic identification across three datasets. Additionally, it accurately identifies 10 tunneling tools, outperforming XGBoost in cross-network scenarios. In summary, METC offers an innovative and efficient solution for encrypted DoH traffic detection and tunnel identification, advancing deep learning applications in network security.}
+}
+```
 ....
 
 
